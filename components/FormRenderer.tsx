@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { fbqTrack, fbqTrackCustom } from "@/components/MetaPixel";
+import { fbqTrack } from "@/components/MetaPixel";
+import { sendCapiEvent } from "@/lib/capi";
 import {
   collectTracking,
   appendUtmToUrl,
@@ -23,11 +24,17 @@ export function FormRenderer({
   mode = "live",
   /** In preview we can force a specific step for editing. */
   forcedIndex,
+  /** Effective pixel id (form override or the owner's account default). */
+  pixelId,
+  /** Shared with MetaPixel's browser PageView so CAPI can deduplicate. */
+  pageViewEventId,
 }: {
   form: DoitForm;
   fields: FormField[];
   mode?: Mode;
   forcedIndex?: number;
+  pixelId?: string | null;
+  pageViewEventId?: string;
 }) {
   const ordered = useMemo(
     () => [...fields].sort((a, b) => a.position - b.position),
@@ -35,6 +42,7 @@ export function FormRenderer({
   );
   const style = { ...DEFAULT_STYLE, ...form.style };
   const pixel = { ...DEFAULT_PIXEL_CONFIG, ...form.pixel_config };
+  const effectivePixelId = pixelId ?? form.pixel_id;
 
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -45,9 +53,59 @@ export function FormRenderer({
   // Mirror of `answers` that updates synchronously — avoids stale-closure reads
   // in validate/submit (e.g. multiple-choice auto-advance fires via setTimeout).
   const answersRef = useRef<Record<string, string>>({});
+  const conversionFired = useRef(false);
+  const pageViewSent = useRef(false);
+
+  /** Browser pixel + server CAPI with a shared event_id so Meta deduplicates. */
+  function fireDualEvent(
+    eventName: string,
+    params?: Record<string, unknown>,
+    { capi = true }: { capi?: boolean } = {},
+  ) {
+    if (mode !== "live" || !effectivePixelId) return;
+    const eventId = crypto.randomUUID();
+    fbqTrack(eventName, params, eventId);
+    if (capi) {
+      sendCapiEvent({
+        slug: form.slug,
+        eventName,
+        eventId,
+        fbp: tracking.current.fbp,
+        fbc: tracking.current.fbc,
+        customData: params,
+      });
+    }
+  }
+
+  /** The configured conversion event (default Lead). Fires exactly once. */
+  function fireConversion(context: Record<string, unknown>) {
+    if (conversionFired.current || !pixel.leadOnComplete) return;
+    conversionFired.current = true;
+    fireDualEvent(pixel.leadEventName || "Lead", {
+      content_name: form.title,
+      ...(pixel.completeEventValue
+        ? { value: pixel.completeEventValue, currency: "BRL" }
+        : {}),
+      ...context,
+    });
+  }
 
   useEffect(() => {
-    if (mode === "live") tracking.current = collectTracking();
+    if (mode !== "live") return;
+    tracking.current = collectTracking();
+    // PageView: the browser event fires in MetaPixel on init; this sends the
+    // deduplicated Conversions API counterpart (same event_id) once per load.
+    if (!pageViewSent.current && effectivePixelId && pixel.pageViewOnLoad) {
+      pageViewSent.current = true;
+      sendCapiEvent({
+        slug: form.slug,
+        eventName: "PageView",
+        eventId: pageViewEventId,
+        fbp: tracking.current.fbp,
+        fbc: tracking.current.fbc,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   const current = mode === "preview" && forcedIndex != null
@@ -118,14 +176,12 @@ export function FormRenderer({
       });
       if (error) throw error;
 
-      // Fire Meta Pixel Lead / conversion event on completion.
-      if (form.pixel_id && pixel.leadOnComplete) {
-        fbqTrack(pixel.leadEventName || "Lead", {
-          content_name: form.title,
-          ...(pixel.completeEventValue
-            ? { value: pixel.completeEventValue, currency: "BRL" }
-            : {}),
-        });
+      // Completion events: EndForm always; conversion (Lead) unless the
+      // configured trigger already fired it at a specific field.
+      fireDualEvent("EndForm", { content_name: form.title });
+      const trigger = form.conversion_trigger || { type: "finish" };
+      if (trigger.type !== "field") {
+        fireConversion({ trigger: "finish" });
       }
       setSubmitted(true);
       return true;
@@ -143,14 +199,30 @@ export function FormRenderer({
     if (!validate(current)) return;
     setError(null);
 
-    // Per-step Meta Pixel event.
-    if (mode === "live" && form.pixel_id && pixel.perStepEvent) {
+    // Per-step event (ViewContent by default) with CAPI dedup.
+    if (mode === "live" && effectivePixelId && pixel.perStepEvent) {
       const evt = pixel.perStepEventName || "ViewContent";
-      fbqTrackCustom(evt, { step: index + 1, step_title: current.title });
+      fireDualEvent(evt, {
+        content_name: form.title,
+        content_category: "form_step",
+        step: index + 1,
+        step_title: current.title,
+      });
     }
 
     const nextIndex = index + 1;
     const nextField = ordered[nextIndex];
+
+    // Conversion trigger "ao chegar em um campo específico".
+    const trigger = form.conversion_trigger || { type: "finish" };
+    if (
+      mode === "live" &&
+      trigger.type === "field" &&
+      nextField &&
+      trigger.fieldId === nextField.id
+    ) {
+      fireConversion({ trigger: "field", step_title: nextField.title });
+    }
 
     // Submit right before showing the thank-you screen (or at the very end).
     if (!nextField || nextField.type === "thankyou") {

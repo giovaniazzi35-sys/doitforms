@@ -73,6 +73,11 @@ export interface PixelConfig {
   completeEventValue?: number;
 }
 
+export interface ConversionTrigger {
+  type: "finish" | "field";
+  fieldId?: string | null;
+}
+
 export interface DoitForm {
   id: string;
   user_id: string;
@@ -84,10 +89,32 @@ export interface DoitForm {
   settings: FormSettings;
   pixel_id: string | null;
   pixel_config: PixelConfig;
+  ga_id: string | null;
+  gtm_id: string | null;
+  tiktok_pixel_id: string | null;
+  conversion_trigger: ConversionTrigger;
   track_utm: boolean;
   append_utm_to_links: boolean;
   created_at: string;
   updated_at: string;
+}
+
+/** Account-level integration defaults (df_profiles). CAPI token is secret —
+ * it is only ever read server-side by the df-capi edge function. */
+export interface ProfileIntegrations {
+  meta_pixel_id: string | null;
+  meta_capi_token: string | null;
+  ga_id: string | null;
+  gtm_id: string | null;
+  tiktok_pixel_id: string | null;
+}
+
+/** Non-secret effective tracking IDs returned by the df_public_tracking RPC. */
+export interface PublicTracking {
+  pixel_id?: string | null;
+  ga_id?: string | null;
+  gtm_id?: string | null;
+  tiktok_pixel_id?: string | null;
 }
 
 export interface FormResponse {
@@ -144,6 +171,6 @@ export const DEFAULT_PIXEL_CONFIG: PixelConfig = {
   pageViewOnLoad: true,
   leadOnComplete: true,
   leadEventName: "Lead",
-  perStepEvent: false,
+  perStepEvent: true,
   perStepEventName: "ViewContent",
 };

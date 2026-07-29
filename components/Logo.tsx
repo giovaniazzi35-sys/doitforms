@@ -1,41 +1,32 @@
+import { LogoMark } from "./LogoMark";
+
 export function Logo({
   className = "",
   mark = true,
-  textClass = "text-ink",
+  size = 30,
+  subtitle = false,
+  textClass = "text-[#4A2D16]",
 }: {
   className?: string;
   mark?: boolean;
+  size?: number;
+  subtitle?: boolean;
   textClass?: string;
 }) {
   return (
-    <span className={`inline-flex items-center gap-2 font-bold ${className}`}>
-      {mark && (
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 32 32"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          aria-hidden
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      {mark && <LogoMark size={size} />}
+      <span className="flex flex-col leading-none">
+        <span
+          className={`text-xl font-extrabold uppercase tracking-tight ${textClass}`}
         >
-          <rect width="32" height="32" rx="8" fill="url(#dg)" />
-          <path
-            d="M9 16.5l4.2 4.2L23 11"
-            stroke="white"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <defs>
-            <linearGradient id="dg" x1="0" y1="0" x2="32" y2="32">
-              <stop stopColor="#6366F1" />
-              <stop offset="1" stopColor="#7C3AED" />
-            </linearGradient>
-          </defs>
-        </svg>
-      )}
-      <span className={`text-xl tracking-tight ${textClass}`}>
-        doit<span className="brand-text-gradient">forms</span>
+          Doit&nbsp;Forms
+        </span>
+        {subtitle && (
+          <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.28em] text-[#6B4A2A]">
+            Formulário traqueado
+          </span>
+        )}
       </span>
     </span>
   );

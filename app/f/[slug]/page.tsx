@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { FormRenderer } from "@/components/FormRenderer";
 import { MetaPixel } from "@/components/MetaPixel";
-import type { DoitForm, FormField } from "@/lib/types";
+import { TrackingScripts } from "@/components/TrackingScripts";
+import type { DoitForm, FormField, PublicTracking } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,17 @@ async function getForm(slug: string) {
     .eq("form_id", form.id)
     .order("position", { ascending: true });
 
-  return { form: form as DoitForm, fields: (fields || []) as FormField[] };
+  // Effective tracking ids: form override or the owner's account default.
+  // The RPC only exposes non-secret ids (never the CAPI token).
+  const { data: trackingData } = await supabase.rpc("df_public_tracking", {
+    p_slug: slug,
+  });
+
+  return {
+    form: form as DoitForm,
+    fields: (fields || []) as FormField[],
+    tracking: (trackingData || {}) as PublicTracking,
+  };
 }
 
 export async function generateMetadata({
@@ -49,10 +60,27 @@ export default async function PublicFormPage({
   const data = await getForm(slug);
   if (!data) notFound();
 
+  const pageViewEventId = crypto.randomUUID();
+
   return (
     <div className="min-h-screen">
-      <MetaPixel pixelId={data.form.pixel_id} firePageView={true} />
-      <FormRenderer form={data.form} fields={data.fields} mode="live" />
+      <MetaPixel
+        pixelId={data.tracking.pixel_id}
+        firePageView={true}
+        pageViewEventId={pageViewEventId}
+      />
+      <TrackingScripts
+        gaId={data.tracking.ga_id}
+        gtmId={data.tracking.gtm_id}
+        tiktokId={data.tracking.tiktok_pixel_id}
+      />
+      <FormRenderer
+        form={data.form}
+        fields={data.fields}
+        mode="live"
+        pixelId={data.tracking.pixel_id}
+        pageViewEventId={pageViewEventId}
+      />
     </div>
   );
 }

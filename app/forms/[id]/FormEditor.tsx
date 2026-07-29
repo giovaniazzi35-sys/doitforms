@@ -19,12 +19,14 @@ import { FormRenderer } from "@/components/FormRenderer";
 import { OptionsTab } from "@/components/editor/OptionsTab";
 import { ShareTab } from "@/components/editor/ShareTab";
 import { ResponsesTab } from "@/components/editor/ResponsesTab";
+import { IntegrationsTab } from "@/components/editor/IntegrationsTab";
 
-type Tab = "editor" | "opcoes" | "compartilhar" | "respostas";
+type Tab = "editor" | "opcoes" | "integracoes" | "compartilhar" | "respostas";
 
 const TAB_LABELS: Record<Tab, string> = {
   editor: "Editor",
   opcoes: "Opções",
+  integracoes: "Integrações",
   compartilhar: "Compartilhar",
   respostas: "Respostas",
 };
@@ -41,7 +43,13 @@ export function FormEditor({
   const initialTab = (searchParams.get("tab") as Tab) || "editor";
 
   const [tab, setTab] = useState<Tab>(
-    (["editor", "opcoes", "compartilhar", "respostas"].includes(initialTab)
+    ([
+      "editor",
+      "opcoes",
+      "integracoes",
+      "compartilhar",
+      "respostas",
+    ].includes(initialTab)
       ? initialTab
       : "editor") as Tab,
   );
@@ -258,6 +266,17 @@ export function FormEditor({
               onPatch={patchForm}
               onPersist={persistForm}
               onDeleted={() => router.push("/dashboard")}
+            />
+          </div>
+        )}
+
+        {tab === "integracoes" && (
+          <div className="h-full overflow-y-auto">
+            <IntegrationsTab
+              form={form}
+              fields={fields}
+              hasDraft={dirty}
+              onPersist={persistForm}
             />
           </div>
         )}

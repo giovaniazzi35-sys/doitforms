@@ -1,0 +1,262 @@
+"use client";
+
+import Link from "next/link";
+import type { DoitForm, FormField, ConversionTrigger } from "@/lib/types";
+
+const CRM_INTEGRATIONS = [
+  {
+    name: "Active Campaign",
+    desc: "Envie novos contatos automaticamente para o Active Campaign",
+  },
+  { name: "Kommo", desc: "Envie novos contatos automaticamente para a Kommo" },
+  {
+    name: "RD Station CRM",
+    desc: "Envie novos contatos automaticamente para o RD Station CRM",
+  },
+  {
+    name: "Google Planilha",
+    desc: "Envie automaticamente novas respostas recebidas diretamente para uma planilha do Google",
+  },
+];
+
+export function IntegrationsTab({
+  form,
+  fields,
+  hasDraft,
+  onPersist,
+}: {
+  form: DoitForm;
+  fields: FormField[];
+  hasDraft: boolean;
+  onPersist: (patch: Record<string, unknown>) => void | Promise<void>;
+}) {
+  const trigger: ConversionTrigger = form.conversion_trigger || {
+    type: "finish",
+  };
+  const questionFields = fields.filter(
+    (f) => f.type !== "welcome" && f.type !== "thankyou",
+  );
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-10">
+      <h1 className="text-2xl font-bold text-slate-900">Integrações</h1>
+      <p className="mt-1 text-sm text-slate-500">
+        Integre seu formulário com outros serviços online.
+      </p>
+
+      {hasDraft && (
+        <div className="mt-5 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Você possui alterações ainda não publicadas no seu formulário.{" "}
+          <strong>Publique</strong> para que as integrações usem a versão mais
+          recente.
+        </div>
+      )}
+
+      {/* CRM/no-code integrations — visual parity; wiring comes with providers */}
+      <section className="mt-8 space-y-5">
+        {CRM_INTEGRATIONS.map((i) => (
+          <div key={i.name} className="flex items-start justify-between gap-4">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                {i.name}
+                <span className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold text-brand-600">
+                  PRO
+                </span>
+              </p>
+              <p className="text-xs text-slate-400">{i.desc}</p>
+            </div>
+            <button
+              disabled
+              title="Em breve"
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-400"
+            >
+              Em breve
+            </button>
+          </div>
+        ))}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Webhooks</p>
+            <p className="text-xs text-slate-400">
+              Notifique uma URL com as novas respostas
+            </p>
+          </div>
+          <button
+            disabled
+            title="Em breve"
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-400"
+          >
+            Em breve
+          </button>
+        </div>
+      </section>
+
+      {/* Métricas e conversões */}
+      <section className="mt-10 border-t border-slate-100 pt-8">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Métricas e conversões
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Os eventos são sempre enviados para essas integrações. Deixe em
+          branco para usar o padrão da{" "}
+          <Link href="/conta" className="font-medium text-brand-600 underline">
+            sua conta
+          </Link>
+          .
+        </p>
+
+        <div className="mt-6 space-y-5">
+          <MetricField
+            label="Facebook (Meta Pixel)"
+            badge="PRO"
+            hint="ID do seu pixel no Facebook. Eventos: PageView, ViewContent (por etapa), Lead e EndForm — com deduplicação via API de Conversão se você configurou o token na sua conta."
+            value={form.pixel_id ?? ""}
+            placeholder="Padrão da conta"
+            onSave={(v) => onPersist({ pixel_id: v.trim() || null })}
+          />
+          <MetricField
+            label="Google Tag Manager"
+            badge="EMPRESA"
+            hint="Adicione o ID do seu container do GTM."
+            value={form.gtm_id ?? ""}
+            placeholder="Padrão da conta (GTM-XXXXXXX)"
+            onSave={(v) => onPersist({ gtm_id: v.trim() || null })}
+          />
+          <MetricField
+            label="Google Analytics"
+            badge="PRO"
+            hint="Adicione o ID de métrica do Google Analytics."
+            value={form.ga_id ?? ""}
+            placeholder="Padrão da conta (G-XXXXXXXXXX)"
+            onSave={(v) => onPersist({ ga_id: v.trim() || null })}
+          />
+          <MetricField
+            label="TikTok"
+            badge="NOVO"
+            hint="Adicione seu TikTok Events Manager ID."
+            value={form.tiktok_pixel_id ?? ""}
+            placeholder="Padrão da conta"
+            onSave={(v) => onPersist({ tiktok_pixel_id: v.trim() || null })}
+          />
+        </div>
+      </section>
+
+      {/* Configurar conversão */}
+      <section className="mt-10 border-t border-slate-100 pt-8 pb-16">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Configurar conversão
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Determine a partir de qual momento um preenchimento será considerado
+          uma conversão — o evento de conversão será enviado para as
+          plataformas nesse instante.
+        </p>
+
+        <div className="mt-5 space-y-2">
+          <label
+            className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${
+              trigger.type === "finish"
+                ? "border-brand-400 bg-brand-50 text-brand-700"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <input
+              type="radio"
+              name="conv"
+              checked={trigger.type === "finish"}
+              onChange={() =>
+                onPersist({ conversion_trigger: { type: "finish" } })
+              }
+              className="accent-brand-600"
+            />
+            🔀 Ao finalizar o formulário por qualquer caminho
+          </label>
+
+          <label
+            className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${
+              trigger.type === "field"
+                ? "border-brand-400 bg-brand-50 text-brand-700"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <input
+              type="radio"
+              name="conv"
+              checked={trigger.type === "field"}
+              onChange={() =>
+                onPersist({
+                  conversion_trigger: {
+                    type: "field",
+                    fieldId: questionFields[0]?.id ?? null,
+                  },
+                })
+              }
+              className="accent-brand-600"
+            />
+            🏁 Ao chegar em um campo específico
+          </label>
+
+          {trigger.type === "field" && (
+            <select
+              value={trigger.fieldId ?? ""}
+              onChange={(e) =>
+                onPersist({
+                  conversion_trigger: { type: "field", fieldId: e.target.value },
+                })
+              }
+              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-400"
+            >
+              {questionFields.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.title}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function MetricField({
+  label,
+  badge,
+  hint,
+  value,
+  placeholder,
+  onSave,
+}: {
+  label: string;
+  badge?: string;
+  hint: string;
+  value: string;
+  placeholder?: string;
+  onSave: (v: string) => void;
+}) {
+  return (
+    <div>
+      <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+        {label}
+        {badge && (
+          <span
+            className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+              badge === "NOVO"
+                ? "bg-emerald-50 text-emerald-600"
+                : "bg-brand-50 text-brand-600"
+            }`}
+          >
+            {badge}
+          </span>
+        )}
+      </p>
+      <p className="mt-0.5 text-xs text-slate-400">{hint}</p>
+      <input
+        defaultValue={value}
+        onBlur={(e) => onSave(e.target.value)}
+        placeholder={placeholder}
+        className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-brand-400"
+      />
+    </div>
+  );
+}
