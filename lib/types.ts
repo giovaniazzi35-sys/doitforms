@@ -152,6 +152,7 @@ export interface FormResponse {
   form_id: string;
   submission_id: string;
   completed: boolean;
+  disqualified: boolean;
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;

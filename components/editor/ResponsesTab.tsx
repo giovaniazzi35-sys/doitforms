@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { deleteResponse } from "@/app/forms/[id]/actions";
 import type { DoitForm, FormField, FormResponse } from "@/lib/types";
 
+type Filter = "all" | "qualified" | "disqualified";
+
 export function ResponsesTab({
   form,
   fields,
@@ -16,6 +18,7 @@ export function ResponsesTab({
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [table, setTable] = useState(false);
+  const [filter, setFilter] = useState<Filter>("all");
 
   const questionFields = useMemo(
     () =>
@@ -40,7 +43,18 @@ export function ResponsesTab({
     })();
   }, [form.id]);
 
-  const selected = responses.find((r) => r.id === selectedId) || null;
+  const dqCount = responses.filter((r) => r.disqualified).length;
+  const qualCount = responses.length - dqCount;
+
+  const visible = useMemo(() => {
+    if (filter === "qualified") return responses.filter((r) => !r.disqualified);
+    if (filter === "disqualified")
+      return responses.filter((r) => r.disqualified);
+    return responses;
+  }, [responses, filter]);
+
+  const selected =
+    visible.find((r) => r.id === selectedId) || visible[0] || null;
 
   function answerFor(resp: FormResponse, fieldId: string): string {
     return (
@@ -59,6 +73,7 @@ export function ResponsesTab({
     const headers = [
       "identificador",
       "data",
+      "status",
       ...questionFields.map((f) => f.title),
       "utm_source",
       "utm_medium",
@@ -68,9 +83,10 @@ export function ResponsesTab({
       "gclid",
       "fbclid",
     ];
-    const rows = responses.map((r) => [
+    const rows = visible.map((r) => [
       r.submission_id,
       new Date(r.created_at).toLocaleString("pt-BR"),
+      r.disqualified ? "Desqualificado" : "Qualificado",
       ...questionFields.map((f) => answerFor(r, f.id).replace(/^—$/, "")),
       r.utm_source || "",
       r.utm_medium || "",
@@ -82,9 +98,7 @@ export function ResponsesTab({
     ]);
     const csv = [headers, ...rows]
       .map((row) =>
-        row
-          .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
-          .join(","),
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
       )
       .join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
@@ -106,11 +120,33 @@ export function ResponsesTab({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3">
-        <h2 className="text-lg font-bold text-slate-900">
-          {responses.length}{" "}
-          {responses.length === 1 ? "resposta" : "respostas"}
-        </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-3">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-slate-900">
+            {responses.length}{" "}
+            {responses.length === 1 ? "resposta" : "respostas"}
+          </h2>
+          {/* qualification filter */}
+          <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs font-medium">
+            <FilterTab
+              active={filter === "all"}
+              onClick={() => setFilter("all")}
+              label={`Todas (${responses.length})`}
+            />
+            <FilterTab
+              active={filter === "qualified"}
+              onClick={() => setFilter("qualified")}
+              label={`Qualificados (${qualCount})`}
+              color="emerald"
+            />
+            <FilterTab
+              active={filter === "disqualified"}
+              onClick={() => setFilter("disqualified")}
+              label={`Desqualificados (${dqCount})`}
+              color="rose"
+            />
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <span>Tabela</span>
@@ -129,7 +165,7 @@ export function ResponsesTab({
           </label>
           <button
             onClick={exportCsv}
-            disabled={!responses.length}
+            disabled={!visible.length}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
           >
             ⬇ Exportar CSV
@@ -137,19 +173,25 @@ export function ResponsesTab({
         </div>
       </div>
 
-      {responses.length === 0 ? (
+      {visible.length === 0 ? (
         <div className="grid flex-1 place-items-center text-center text-slate-400">
           <div>
             <p className="text-4xl">📭</p>
-            <p className="mt-3">Ainda não há respostas.</p>
-            <p className="text-sm">
-              Compartilhe o link do formulário para começar a receber.
+            <p className="mt-3">
+              {responses.length === 0
+                ? "Ainda não há respostas."
+                : "Nenhuma resposta neste filtro."}
             </p>
+            {responses.length === 0 && (
+              <p className="text-sm">
+                Compartilhe o link do formulário para começar a receber.
+              </p>
+            )}
           </div>
         </div>
       ) : table ? (
         <TableView
-          responses={responses}
+          responses={visible}
           questionFields={questionFields}
           answerFor={answerFor}
         />
@@ -157,24 +199,26 @@ export function ResponsesTab({
         <div className="flex min-h-0 flex-1">
           {/* list */}
           <div className="thin-scroll w-64 shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
-            {responses.map((r, i) => {
+            {visible.map((r, i) => {
               const name =
-                r.df_response_answers?.find((a) => a.value)?.value ||
-                "Sem nome";
+                r.df_response_answers?.find((a) => a.value)?.value || "Sem nome";
               return (
                 <button
                   key={r.id}
                   onClick={() => setSelectedId(r.id)}
                   className={`block w-full border-b border-slate-50 px-4 py-3 text-left transition ${
-                    selectedId === r.id ? "bg-brand-50" : "hover:bg-slate-50"
+                    selected?.id === r.id ? "bg-brand-50" : "hover:bg-slate-50"
                   }`}
                 >
-                  <span className="text-xs font-bold text-slate-400">
-                    {responses.length - i}.
-                  </span>{" "}
-                  <span className="text-sm font-medium text-slate-700">
-                    {name}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-400">
+                      {visible.length - i}.
+                    </span>
+                    <span className="truncate text-sm font-medium text-slate-700">
+                      {name}
+                    </span>
+                    {r.disqualified && <DqDot />}
+                  </div>
                   <p className="mt-0.5 text-xs text-slate-400">
                     {new Date(r.created_at).toLocaleString("pt-BR")}
                   </p>
@@ -200,6 +244,55 @@ export function ResponsesTab({
   );
 }
 
+function FilterTab({
+  active,
+  onClick,
+  label,
+  color,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  color?: "emerald" | "rose";
+}) {
+  const activeCls =
+    color === "emerald"
+      ? "bg-emerald-500 text-white"
+      : color === "rose"
+        ? "bg-rose-500 text-white"
+        : "bg-slate-700 text-white";
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-md px-2.5 py-1 transition ${
+        active ? activeCls : "text-slate-500 hover:text-slate-800"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function DqDot() {
+  return (
+    <span className="ml-auto shrink-0 rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">
+      Desqualif.
+    </span>
+  );
+}
+
+function StatusBadge({ disqualified }: { disqualified: boolean }) {
+  return disqualified ? (
+    <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 ring-1 ring-rose-100">
+      ✕ Desqualificado
+    </span>
+  ) : (
+    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+      ✓ Qualificado
+    </span>
+  );
+}
+
 function DetailView({
   response,
   questionFields,
@@ -214,12 +307,15 @@ function DetailView({
   return (
     <div className="mx-auto max-w-2xl">
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-        <div className="mb-6 border-b border-slate-100 pb-4 text-xs text-slate-400">
-          <p>
-            Data de início:{" "}
-            {new Date(response.created_at).toLocaleString("pt-BR")}
-          </p>
-          <p>Identificador: {response.submission_id}</p>
+        <div className="mb-6 flex items-start justify-between border-b border-slate-100 pb-4">
+          <div className="text-xs text-slate-400">
+            <p>
+              Data de início:{" "}
+              {new Date(response.created_at).toLocaleString("pt-BR")}
+            </p>
+            <p>Identificador: {response.submission_id}</p>
+          </div>
+          <StatusBadge disqualified={response.disqualified} />
         </div>
 
         <div className="space-y-5">
@@ -281,6 +377,7 @@ function TableView({
         <thead>
           <tr className="border-b border-slate-200 text-left text-slate-500">
             <th className="whitespace-nowrap px-3 py-2 font-semibold">Data</th>
+            <th className="whitespace-nowrap px-3 py-2 font-semibold">Status</th>
             {questionFields.map((f) => (
               <th key={f.id} className="whitespace-nowrap px-3 py-2 font-semibold">
                 {f.title}
@@ -296,6 +393,17 @@ function TableView({
             <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50">
               <td className="whitespace-nowrap px-3 py-2 text-slate-400">
                 {new Date(r.created_at).toLocaleDateString("pt-BR")}
+              </td>
+              <td className="whitespace-nowrap px-3 py-2">
+                {r.disqualified ? (
+                  <span className="rounded bg-rose-50 px-1.5 py-0.5 text-xs font-medium text-rose-600">
+                    Desqualif.
+                  </span>
+                ) : (
+                  <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
+                    Qualif.
+                  </span>
+                )}
               </td>
               {questionFields.map((f) => (
                 <td key={f.id} className="px-3 py-2 text-slate-700">
