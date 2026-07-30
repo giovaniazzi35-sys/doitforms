@@ -232,6 +232,7 @@ export function FormEditor({
                   <FieldEditor
                     key={selected.id}
                     field={selected}
+                    allFields={fields}
                     onChange={(patch) => patchField(selected.id, patch)}
                     onSave={(patch) => saveField(selected.id, patch)}
                   />

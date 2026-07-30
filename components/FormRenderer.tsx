@@ -195,6 +195,26 @@ export function FormRenderer({
     }
   }
 
+  /** Resolve where to go after the current step, honoring conditional logic. */
+  function resolveTarget(): { index: number; submit: boolean } {
+    // Conditional branching only for single-select multiple choice with logic on.
+    if (
+      current.type === "multiple_choice" &&
+      current.config?.logicEnabled &&
+      !current.config?.multiple
+    ) {
+      const chosen = current.options.find(
+        (o) => o.label === answersRef.current[current.id],
+      );
+      if (chosen?.goTo === "submit") return { index: index + 1, submit: true };
+      if (chosen?.goTo) {
+        const t = ordered.findIndex((f) => f.id === chosen.goTo);
+        if (t >= 0) return { index: t, submit: false };
+      }
+    }
+    return { index: index + 1, submit: false };
+  }
+
   async function goNext() {
     if (!validate(current)) return;
     setError(null);
@@ -210,34 +230,61 @@ export function FormRenderer({
       });
     }
 
-    const nextIndex = index + 1;
-    const nextField = ordered[nextIndex];
+    const { index: targetIndex, submit } = resolveTarget();
+    const targetField = submit ? undefined : ordered[targetIndex];
 
     // Conversion trigger "ao chegar em um campo específico".
     const trigger = form.conversion_trigger || { type: "finish" };
     if (
       mode === "live" &&
       trigger.type === "field" &&
-      nextField &&
-      trigger.fieldId === nextField.id
+      targetField &&
+      trigger.fieldId === targetField.id
     ) {
-      fireConversion({ trigger: "field", step_title: nextField.title });
+      fireConversion({ trigger: "field", step_title: targetField.title });
     }
 
-    // Submit right before showing the thank-you screen (or at the very end).
-    if (!nextField || nextField.type === "thankyou") {
+    // Submit right before finishing / reaching a thank-you screen.
+    if (submit || !targetField || targetField.type === "thankyou") {
       const ok = await submitResponse();
       if (!ok) return;
     }
 
-    if (!nextField) {
-      // No explicit thank-you screen; handle redirect if configured.
+    // Explicit "finalizar" branch → jump to a thank-you screen if there is one.
+    if (submit) {
+      const ty = ordered.findIndex((f) => f.type === "thankyou");
+      if (ty >= 0) {
+        setIndex(ty);
+        handleThankyouRedirect(ordered[ty]);
+      }
+      return;
+    }
+
+    if (!targetField) {
       handleThankyouRedirect(current);
       return;
     }
-    setIndex(nextIndex);
+    setIndex(targetIndex);
+    if (targetField.type === "thankyou") handleThankyouRedirect(targetField);
+  }
 
-    if (nextField.type === "thankyou") handleThankyouRedirect(nextField);
+  function handleButtonClick(btn: {
+    label: string;
+    url?: string;
+    event?: string;
+  }) {
+    fireDualEvent(btn.event || "ClickButton", {
+      button_label: btn.label,
+      content_name: form.title,
+    });
+    if (btn.url && mode === "live") {
+      const dest = form.append_utm_to_links
+        ? appendUtmToUrl(btn.url, tracking.current)
+        : btn.url;
+      setTimeout(() => {
+        window.location.href = dest;
+      }, 250);
+    }
   }
 
   function handleThankyouRedirect(field: FormField) {
@@ -338,6 +385,26 @@ export function FormRenderer({
               </>
             )}
           </div>
+
+          {/* Custom tracked buttons (welcome / thank-you screens) */}
+          {(current.config?.buttons?.length ?? 0) > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {current.config!.buttons!.map((b) => (
+                <button
+                  key={b.id}
+                  onClick={() => handleButtonClick(b)}
+                  className="rounded-lg border-2 px-5 py-2.5 text-sm font-semibold transition hover:opacity-90"
+                  style={{
+                    borderColor: style.buttonColor,
+                    color: style.buttonColor,
+                    borderRadius: radius,
+                  }}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -355,6 +422,186 @@ export function FormRenderer({
 function isLastQuestion(ordered: FormField[], index: number): boolean {
   const next = ordered[index + 1];
   return !next || next.type === "thankyou";
+}
+
+const OTHER_SEP = " | ";
+
+/** Deterministic shuffle (seeded by field id) so SSR and client agree. */
+function seededShuffle<T>(arr: T[], seedStr: string): T[] {
+  let seed = 0;
+  for (let i = 0; i < seedStr.length; i++)
+    seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0;
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    const j = seed % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function ChoiceField({
+  field,
+  style,
+  radius,
+  value,
+  setValue,
+  onEnter,
+}: {
+  field: FormField;
+  style: DoitForm["style"];
+  radius: string;
+  value: string;
+  setValue: (v: string) => void;
+  onEnter: () => void;
+}) {
+  const cfg = field.config || {};
+  const multiple = !!cfg.multiple;
+  const allowOther = !!cfg.allowOther;
+  const qColor = style.questionColor;
+
+  const opts = useMemo(
+    () => (cfg.shuffle ? seededShuffle(field.options, field.id) : field.options),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [field.id],
+  );
+  const optionLabels = useMemo(
+    () => new Set(field.options.map((o) => o.label)),
+    [field.options],
+  );
+
+  // Rebuild local selection state from the stored value (survives back-nav).
+  const initParts = value ? value.split(OTHER_SEP) : [];
+  const [selected, setSelected] = useState<string[]>(() =>
+    initParts.filter((p) => optionLabels.has(p)),
+  );
+  const [otherOn, setOtherOn] = useState<boolean>(
+    () => allowOther && initParts.some((p) => !optionLabels.has(p)),
+  );
+  const [otherText, setOtherText] = useState<string>(
+    () => initParts.find((p) => !optionLabels.has(p)) || "",
+  );
+
+  function compose(sel: string[], on: boolean, txt: string): string {
+    const parts = [...sel];
+    if (on && txt.trim()) parts.push(txt.trim());
+    return parts.join(OTHER_SEP);
+  }
+
+  function pickSingle(label: string) {
+    setSelected([label]);
+    setOtherOn(false);
+    setValue(label);
+    setTimeout(onEnter, 180);
+  }
+
+  function toggleMulti(label: string) {
+    const next = selected.includes(label)
+      ? selected.filter((l) => l !== label)
+      : [...selected, label];
+    setSelected(next);
+    setValue(compose(next, otherOn, otherText));
+  }
+
+  function toggleOther() {
+    if (multiple) {
+      const on = !otherOn;
+      setOtherOn(on);
+      setValue(compose(selected, on, otherText));
+    } else {
+      setSelected([]);
+      setOtherOn(true);
+      setValue(compose([], true, otherText));
+    }
+  }
+
+  const isSel = (label: string) =>
+    multiple ? selected.includes(label) : selected[0] === label;
+
+  const containerClass = cfg.sameLine
+    ? "flex flex-wrap gap-3"
+    : "grid gap-3";
+
+  return (
+    <div>
+      <div className={containerClass}>
+        {opts.map((opt) => {
+          const on = isSel(opt.label);
+          const origIndex = field.options.findIndex((o) => o.id === opt.id);
+          return (
+            <button
+              key={opt.id}
+              onClick={() =>
+                multiple ? toggleMulti(opt.label) : pickSingle(opt.label)
+              }
+              className={`flex items-center gap-3 border-2 px-4 py-3 text-left text-base transition hover:bg-black/[0.02] ${
+                cfg.sameLine ? "" : "w-full"
+              }`}
+              style={{
+                borderColor: on ? style.buttonColor : "#e2e8f0",
+                backgroundColor: on ? `${style.buttonColor}12` : undefined,
+                borderRadius: radius,
+                color: qColor,
+              }}
+            >
+              <span
+                className="grid h-7 w-7 shrink-0 place-items-center rounded border text-xs font-bold"
+                style={{
+                  borderColor: on ? style.buttonColor : "#cbd5e1",
+                  backgroundColor: on ? style.buttonColor : undefined,
+                  color: on ? "#fff" : "#94a3b8",
+                }}
+              >
+                {String.fromCharCode(65 + origIndex)}
+              </span>
+              {opt.label}
+            </button>
+          );
+        })}
+
+        {allowOther && (
+          <button
+            onClick={toggleOther}
+            className={`flex items-center gap-3 border-2 px-4 py-3 text-left text-base transition hover:bg-black/[0.02] ${
+              cfg.sameLine ? "" : "w-full"
+            }`}
+            style={{
+              borderColor: otherOn ? style.buttonColor : "#e2e8f0",
+              backgroundColor: otherOn ? `${style.buttonColor}12` : undefined,
+              borderRadius: radius,
+              color: qColor,
+            }}
+          >
+            <span
+              className="grid h-7 w-7 shrink-0 place-items-center rounded border text-xs font-bold"
+              style={{
+                borderColor: otherOn ? style.buttonColor : "#cbd5e1",
+                backgroundColor: otherOn ? style.buttonColor : undefined,
+                color: otherOn ? "#fff" : "#94a3b8",
+              }}
+            >
+              +
+            </span>
+            Outros
+          </button>
+        )}
+      </div>
+
+      {allowOther && otherOn && (
+        <input
+          autoFocus
+          value={otherText}
+          onChange={(e) => {
+            setOtherText(e.target.value);
+            setValue(compose(selected, true, e.target.value));
+          }}
+          placeholder="Digite sua resposta"
+          className="mt-3 w-full border-b-2 bg-transparent px-1 py-2 text-lg outline-none"
+          style={{ borderColor: style.answerColor, color: style.answerColor }}
+        />
+      )}
+    </div>
+  );
 }
 
 function StepBody({
@@ -423,39 +670,15 @@ function StepBody({
             style={{ borderColor: aColor, color: aColor }}
           />
         ) : field.type === "multiple_choice" ? (
-          <div className="grid gap-3">
-            {field.options.map((opt, i) => {
-              const selected = value === opt.label;
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => {
-                    setValue(opt.label);
-                    setTimeout(onEnter, 180);
-                  }}
-                  className="flex items-center gap-3 border-2 px-4 py-3 text-left text-base transition hover:bg-black/[0.02]"
-                  style={{
-                    borderColor: selected ? style.buttonColor : "#e2e8f0",
-                    backgroundColor: selected ? `${style.buttonColor}12` : undefined,
-                    borderRadius: radius,
-                    color: qColor,
-                  }}
-                >
-                  <span
-                    className="grid h-7 w-7 shrink-0 place-items-center rounded border text-xs font-bold"
-                    style={{
-                      borderColor: selected ? style.buttonColor : "#cbd5e1",
-                      backgroundColor: selected ? style.buttonColor : undefined,
-                      color: selected ? "#fff" : "#94a3b8",
-                    }}
-                  >
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
+          <ChoiceField
+            key={field.id}
+            field={field}
+            style={style}
+            radius={radius}
+            value={value}
+            setValue={setValue}
+            onEnter={onEnter}
+          />
         ) : (
           <input
             autoFocus

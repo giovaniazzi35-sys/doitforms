@@ -10,6 +10,17 @@ export type FieldType =
 export interface FieldOption {
   id: string;
   label: string;
+  /** Conditional logic: jump to this field id when this option is chosen.
+   * "" / null = go to the next step normally; "submit" = finish the form. */
+  goTo?: string | null;
+}
+
+/** Custom, fully-tracked button (welcome / thank-you screens). */
+export interface TrackedButton {
+  id: string;
+  label: string;
+  url?: string; // optional destination (UTMs appended if enabled)
+  event?: string; // Meta Pixel event fired on click (default "ClickButton")
 }
 
 export interface FormField {
@@ -29,8 +40,15 @@ export interface FieldConfig {
   buttonText?: string; // welcome / thankyou CTA
   redirectUrl?: string; // thankyou redirect
   placeholder?: string;
-  multiple?: boolean; // multiple_choice: allow many
   imageUrl?: string;
+  // multiple_choice options
+  multiple?: boolean; // allow selecting many
+  shuffle?: boolean; // randomize option order
+  sameLine?: boolean; // render options inline (chips)
+  allowOther?: boolean; // append an "Outros" free-text option
+  logicEnabled?: boolean; // enable per-option branching (goTo)
+  // welcome / thankyou custom tracked buttons
+  buttons?: TrackedButton[];
 }
 
 export interface FormStyle {

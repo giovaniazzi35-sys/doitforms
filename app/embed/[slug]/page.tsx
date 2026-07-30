@@ -14,24 +14,19 @@ export default async function EmbedFormPage({
 }) {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: form } = await supabase
-    .from("df_forms")
-    .select("*")
-    .eq("slug", slug)
-    .eq("published", true)
-    .maybeSingle();
-  if (!form) notFound();
 
-  const { data: fields } = await supabase
-    .from("df_form_fields")
-    .select("*")
-    .eq("form_id", form.id)
-    .order("position", { ascending: true });
-
-  const { data: trackingData } = await supabase.rpc("df_public_tracking", {
+  // Public form data goes exclusively through the df_get_public_form RPC —
+  // there is no table-level SELECT policy on df_forms/df_form_fields for
+  // anon/authenticated, so this is the only door in and it never leaks
+  // another user's forms.
+  const { data, error } = await supabase.rpc("df_get_public_form", {
     p_slug: slug,
   });
-  const tracking = (trackingData || {}) as PublicTracking;
+  if (error || !data || !data.form) notFound();
+
+  const form = data.form as DoitForm;
+  const fields = (data.fields || []) as FormField[];
+  const tracking = (data.tracking || {}) as PublicTracking;
   const pageViewEventId = crypto.randomUUID();
 
   return (
@@ -47,8 +42,8 @@ export default async function EmbedFormPage({
         tiktokId={tracking.tiktok_pixel_id}
       />
       <FormRenderer
-        form={form as DoitForm}
-        fields={(fields || []) as FormField[]}
+        form={form}
+        fields={fields}
         mode="live"
         pixelId={tracking.pixel_id}
         pageViewEventId={pageViewEventId}

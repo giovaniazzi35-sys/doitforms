@@ -8,32 +8,29 @@ import type { DoitForm, FormField, PublicTracking } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-async function getForm(slug: string) {
+interface PublicFormPayload {
+  form: DoitForm;
+  fields: FormField[];
+  tracking: PublicTracking;
+}
+
+/**
+ * Public form data goes exclusively through the df_get_public_form RPC
+ * (SECURITY DEFINER). There is no table-level SELECT policy exposing df_forms
+ * or df_form_fields to anon/authenticated — this is the only door in, and it
+ * only ever returns ONE published form's own data (never another user's).
+ */
+async function getForm(slug: string): Promise<PublicFormPayload | null> {
   const supabase = await createClient();
-  const { data: form } = await supabase
-    .from("df_forms")
-    .select("*")
-    .eq("slug", slug)
-    .eq("published", true)
-    .maybeSingle();
-  if (!form) return null;
-
-  const { data: fields } = await supabase
-    .from("df_form_fields")
-    .select("*")
-    .eq("form_id", form.id)
-    .order("position", { ascending: true });
-
-  // Effective tracking ids: form override or the owner's account default.
-  // The RPC only exposes non-secret ids (never the CAPI token).
-  const { data: trackingData } = await supabase.rpc("df_public_tracking", {
+  const { data, error } = await supabase.rpc("df_get_public_form", {
     p_slug: slug,
   });
+  if (error || !data || !data.form) return null;
 
   return {
-    form: form as DoitForm,
-    fields: (fields || []) as FormField[],
-    tracking: (trackingData || {}) as PublicTracking,
+    form: data.form as DoitForm,
+    fields: (data.fields || []) as FormField[],
+    tracking: (data.tracking || {}) as PublicTracking,
   };
 }
 
