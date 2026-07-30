@@ -13,6 +13,9 @@ export interface FieldOption {
   /** Conditional logic: jump to this field id when this option is chosen.
    * "" / null = go to the next step normally; "submit" = finish the form. */
   goTo?: string | null;
+  /** Qualification logic: choosing this option disqualifies the lead — the
+   * form ends on the disqualification screen and no conversion event fires. */
+  disqualify?: boolean;
 }
 
 /** Custom, fully-tracked button (welcome / thank-you screens). */
@@ -47,6 +50,7 @@ export interface FieldConfig {
   sameLine?: boolean; // render options inline (chips)
   allowOther?: boolean; // append an "Outros" free-text option
   logicEnabled?: boolean; // enable per-option branching (goTo)
+  qualifyEnabled?: boolean; // enable per-option qualify/disqualify
   // welcome / thankyou custom tracked buttons
   buttons?: TrackedButton[];
 }
@@ -73,6 +77,12 @@ export interface NotificationSettings {
   forwardTo?: string;
 }
 
+export interface DisqualifyScreen {
+  title?: string;
+  message?: string;
+  redirectUrl?: string;
+}
+
 export interface FormSettings {
   notifications?: NotificationSettings;
   removeBranding?: boolean;
@@ -80,6 +90,8 @@ export interface FormSettings {
   block_new?: boolean;
   shareTitle?: string;
   shareDescription?: string;
+  /** Screen shown when a lead is disqualified by qualification logic. */
+  disqualify?: DisqualifyScreen;
 }
 
 export interface PixelConfig {

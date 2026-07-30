@@ -49,6 +49,7 @@ export function FormRenderer({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [disqualified, setDisqualified] = useState(false);
   const tracking = useRef<TrackingData>({});
   // Mirror of `answers` that updates synchronously — avoids stale-closure reads
   // in validate/submit (e.g. multiple-choice auto-advance fires via setTimeout).
@@ -148,7 +149,9 @@ export function FormRenderer({
     return true;
   }
 
-  async function submitResponse(): Promise<boolean> {
+  async function submitResponse(opts?: {
+    disqualified?: boolean;
+  }): Promise<boolean> {
     if (submitted) return true;
     if (mode === "preview") {
       setSubmitted(true);
@@ -173,15 +176,21 @@ export function FormRenderer({
         p_completed: true,
         p_tracking: tracking.current,
         p_answers: payload,
+        p_disqualified: !!opts?.disqualified,
       });
       if (error) throw error;
 
-      // Completion events: EndForm always; conversion (Lead) unless the
-      // configured trigger already fired it at a specific field.
-      fireDualEvent("EndForm", { content_name: form.title });
-      const trigger = form.conversion_trigger || { type: "finish" };
-      if (trigger.type !== "field") {
-        fireConversion({ trigger: "finish" });
+      if (opts?.disqualified) {
+        // Disqualified leads: fire a distinct event, never the Lead conversion.
+        fireDualEvent("Disqualified", { content_name: form.title });
+      } else {
+        // Completion events: EndForm always; conversion (Lead) unless the
+        // configured trigger already fired it at a specific field.
+        fireDualEvent("EndForm", { content_name: form.title });
+        const trigger = form.conversion_trigger || { type: "finish" };
+        if (trigger.type !== "field") {
+          fireConversion({ trigger: "finish" });
+        }
       }
       setSubmitted(true);
       return true;
@@ -192,6 +201,29 @@ export function FormRenderer({
       return false;
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  /** Does the current answer disqualify the lead (qualification logic)? */
+  function isDisqualifyingAnswer(field: FormField): boolean {
+    if (field.type !== "multiple_choice" || !field.config?.qualifyEnabled)
+      return false;
+    const val = answersRef.current[field.id] || "";
+    const chosen = field.config?.multiple ? val.split(OTHER_SEP) : [val];
+    return field.options.some(
+      (o) => o.disqualify && chosen.includes(o.label),
+    );
+  }
+
+  function handleDisqualifyRedirect() {
+    const url = form.settings?.disqualify?.redirectUrl?.trim();
+    if (mode === "live" && url) {
+      const final = form.append_utm_to_links
+        ? appendUtmToUrl(url, tracking.current)
+        : url;
+      setTimeout(() => {
+        window.location.href = final;
+      }, 1200);
     }
   }
 
@@ -228,6 +260,16 @@ export function FormRenderer({
         step: index + 1,
         step_title: current.title,
       });
+    }
+
+    // Qualification: a disqualifying answer ends the form on the
+    // disqualification screen (no conversion event fires).
+    if (isDisqualifyingAnswer(current)) {
+      const ok = await submitResponse({ disqualified: true });
+      if (!ok) return;
+      setDisqualified(true);
+      handleDisqualifyRedirect();
+      return;
     }
 
     const { index: targetIndex, submit } = resolveTarget();
@@ -313,6 +355,48 @@ export function FormRenderer({
     : { backgroundColor: style.backgroundColor };
 
   const radius = `${style.borderRadius ?? 8}px`;
+
+  // Disqualification end screen (qualification logic).
+  if (disqualified) {
+    const dq = form.settings?.disqualify || {};
+    return (
+      <div
+        className="relative flex min-h-full w-full flex-col"
+        style={{ ...bg, fontFamily: style.font }}
+      >
+        <div className="flex flex-1 items-center justify-center px-5 py-10">
+          <div className="w-full max-w-xl animate-fade-up text-center">
+            {style.logo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={style.logo}
+                alt="logo"
+                className="mx-auto mb-8 h-12 object-contain"
+              />
+            )}
+            <h2
+              className="text-2xl font-bold leading-snug sm:text-3xl"
+              style={{ color: style.questionColor }}
+            >
+              {dq.title || "Obrigado pelo seu interesse!"}
+            </h2>
+            <p className="mt-3 text-base text-slate-500">
+              {dq.message ||
+                "No momento seu perfil não se encaixa no que buscamos, mas agradecemos a sua participação."}
+            </p>
+            {mode === "live" && dq.redirectUrl && (
+              <p className="mt-4 text-sm text-slate-400">Redirecionando...</p>
+            )}
+          </div>
+        </div>
+        {!form.settings?.removeBranding && (
+          <div className="pb-4 text-center">
+            <span className="text-xs text-slate-400">Feito com doitforms</span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

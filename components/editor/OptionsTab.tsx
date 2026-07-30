@@ -230,6 +230,58 @@ export function OptionsTab({
         </div>
       </Section>
 
+      {/* Tela de desqualificação */}
+      <Section
+        title="Tela de desqualificação"
+        subtitle="Exibida quando o lead é desqualificado pela lógica de qualificação de uma etapa. Ative a Qualificação em um campo de múltipla escolha no editor."
+      >
+        <div className="space-y-4">
+          <Row label="Título">
+            <input
+              defaultValue={settings.disqualify?.title || ""}
+              onBlur={(e) =>
+                patchSettings({
+                  disqualify: { ...settings.disqualify, title: e.target.value },
+                })
+              }
+              placeholder="Obrigado pelo seu interesse!"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+            />
+          </Row>
+          <Row label="Mensagem">
+            <textarea
+              defaultValue={settings.disqualify?.message || ""}
+              onBlur={(e) =>
+                patchSettings({
+                  disqualify: {
+                    ...settings.disqualify,
+                    message: e.target.value,
+                  },
+                })
+              }
+              rows={2}
+              placeholder="No momento seu perfil não se encaixa, mas agradecemos a participação."
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+            />
+          </Row>
+          <Row label="Redirecionar para (opcional)">
+            <input
+              defaultValue={settings.disqualify?.redirectUrl || ""}
+              onBlur={(e) =>
+                patchSettings({
+                  disqualify: {
+                    ...settings.disqualify,
+                    redirectUrl: e.target.value,
+                  },
+                })
+              }
+              placeholder="https://..."
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+            />
+          </Row>
+        </div>
+      </Section>
+
       {/* Limites */}
       <Section title="Limites de envio e acesso">
         <div className="space-y-4">

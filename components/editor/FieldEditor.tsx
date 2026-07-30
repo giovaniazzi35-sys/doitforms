@@ -140,6 +140,33 @@ export function FieldEditor({
                       </select>
                     </div>
                   )}
+
+                  {cfg.qualifyEnabled && (
+                    <div className="mt-2 flex items-center gap-2 pl-9 text-xs">
+                      <span className="whitespace-nowrap text-slate-500">
+                        Esta resposta:
+                      </span>
+                      <select
+                        value={opt.disqualify ? "dq" : "ok"}
+                        onChange={(e) => {
+                          const next = field.options.map((o) =>
+                            o.id === opt.id
+                              ? { ...o, disqualify: e.target.value === "dq" }
+                              : o,
+                          );
+                          updateOptions(next);
+                        }}
+                        className={`flex-1 rounded border px-2 py-1 text-xs font-medium outline-none ${
+                          opt.disqualify
+                            ? "border-rose-200 bg-rose-50 text-rose-600"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        }`}
+                      >
+                        <option value="ok">✓ Qualifica (avança)</option>
+                        <option value="dq">✕ Desqualifica (encerra)</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               ))}
               <button
@@ -185,6 +212,12 @@ export function FieldEditor({
               desc="Cada opção pode levar o respondente a uma etapa diferente."
               checked={!!cfg.logicEnabled}
               onChange={(v) => updateConfig({ logicEnabled: v })}
+            />
+            <Toggle
+              label="Qualificação (avança / desqualifica)"
+              desc="Marque quais respostas qualificam o lead. Respostas que desqualificam encerram o formulário sem contar como conversão."
+              checked={!!cfg.qualifyEnabled}
+              onChange={(v) => updateConfig({ qualifyEnabled: v })}
             />
           </div>
         </>
