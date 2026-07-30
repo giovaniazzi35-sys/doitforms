@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { updateIntegrations } from "./actions";
 import type { ProfileIntegrations } from "@/lib/types";
+import {
+  extractGtmId,
+  extractGaId,
+  extractPixelId,
+  extractTikTokId,
+} from "@/lib/tracking-ids";
 
 export function ContaClient({
   email,
@@ -29,7 +35,21 @@ export function ContaClient({
     setSaving(true);
     setError(null);
     try {
-      await updateIntegrations(values);
+      // Accept full pasted snippets — extract the bare ids before saving.
+      const cleaned: ProfileIntegrations = {
+        ...values,
+        meta_pixel_id: values.meta_pixel_id
+          ? extractPixelId(values.meta_pixel_id)
+          : null,
+        ga_id: values.ga_id ? extractGaId(values.ga_id) : null,
+        gtm_id: values.gtm_id ? extractGtmId(values.gtm_id) : null,
+        tiktok_pixel_id: values.tiktok_pixel_id
+          ? extractTikTokId(values.tiktok_pixel_id)
+          : null,
+        meta_capi_token: values.meta_capi_token?.trim() || null,
+      };
+      setValues(cleaned);
+      await updateIntegrations(cleaned);
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao salvar.");
@@ -94,18 +114,24 @@ export function ContaClient({
         <h2 className="text-lg font-semibold text-slate-900">
           Outras métricas (padrão da conta)
         </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Cole apenas o ID ou o código completo que a plataforma fornece — o app
+          extrai o ID e instala a tag automaticamente ao salvar.
+        </p>
         <div className="mt-5 space-y-4">
           <Field
-            label="Google Analytics (ID de métrica)"
-            value={values.ga_id ?? ""}
-            onChange={(v) => set("ga_id", v)}
-            placeholder="G-XXXXXXXXXX"
-          />
-          <Field
-            label="Google Tag Manager (ID do container)"
+            label="Google Tag Manager (GTM)"
+            hint="Cole o ID do container (GTM-XXXXXXX) ou o código completo do GTM."
             value={values.gtm_id ?? ""}
             onChange={(v) => set("gtm_id", v)}
-            placeholder="GTM-XXXXXXX"
+            placeholder="GTM-XXXXXXX ou cole o código completo"
+          />
+          <Field
+            label="Google Analytics (GA4)"
+            hint="Cole o ID de métrica (G-XXXXXXXXXX) ou o código completo."
+            value={values.ga_id ?? ""}
+            onChange={(v) => set("ga_id", v)}
+            placeholder="G-XXXXXXXXXX ou cole o código completo"
           />
           <Field
             label="TikTok Events Manager ID"

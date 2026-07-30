@@ -36,18 +36,30 @@ export function TrackingScripts({
       )}
 
       {gtmId && (
-        <Script id="df-gtm" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
-            (function(){
-              var s = document.createElement('script');
-              s.async = true;
-              s.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent('${gtmId}');
-              document.head.appendChild(s);
-            })();
-          `}
-        </Script>
+        <>
+          <Script id="df-gtm" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
+              (function(){
+                var s = document.createElement('script');
+                s.async = true;
+                s.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent('${gtmId}');
+                document.head.appendChild(s);
+              })();
+            `}
+          </Script>
+          <noscript>
+            {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${encodeURIComponent(gtmId)}`}
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+              title="gtm"
+            />
+          </noscript>
+        </>
       )}
 
       {tiktokId && (

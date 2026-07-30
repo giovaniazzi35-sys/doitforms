@@ -2,6 +2,12 @@
 
 import Link from "next/link";
 import type { DoitForm, FormField, ConversionTrigger } from "@/lib/types";
+import {
+  extractGtmId,
+  extractGaId,
+  extractPixelId,
+  extractTikTokId,
+} from "@/lib/tracking-ids";
 
 const CRM_INTEGRATIONS = [
   {
@@ -112,31 +118,43 @@ export function IntegrationsTab({
             hint="ID do seu pixel no Facebook. Eventos: PageView, ViewContent (por etapa), Lead e EndForm — com deduplicação via API de Conversão se você configurou o token na sua conta."
             value={form.pixel_id ?? ""}
             placeholder="Padrão da conta"
-            onSave={(v) => onPersist({ pixel_id: v.trim() || null })}
+            onSave={(v) => {
+              const id = extractPixelId(v);
+              onPersist({ pixel_id: id || null });
+            }}
           />
           <MetricField
             label="Google Tag Manager"
             badge="EMPRESA"
-            hint="Adicione o ID do seu container do GTM."
+            hint="Cole o ID do container (GTM-XXXXXXX) ou o código completo do GTM que o Google fornece — extraímos o ID automaticamente."
             value={form.gtm_id ?? ""}
-            placeholder="Padrão da conta (GTM-XXXXXXX)"
-            onSave={(v) => onPersist({ gtm_id: v.trim() || null })}
+            placeholder="GTM-XXXXXXX ou cole o código completo"
+            onSave={(v) => {
+              const id = extractGtmId(v);
+              onPersist({ gtm_id: id || null });
+            }}
           />
           <MetricField
             label="Google Analytics"
             badge="PRO"
-            hint="Adicione o ID de métrica do Google Analytics."
+            hint="Cole o ID de métrica (G-XXXXXXXXXX) ou o código completo — extraímos o ID."
             value={form.ga_id ?? ""}
-            placeholder="Padrão da conta (G-XXXXXXXXXX)"
-            onSave={(v) => onPersist({ ga_id: v.trim() || null })}
+            placeholder="G-XXXXXXXXXX ou cole o código completo"
+            onSave={(v) => {
+              const id = extractGaId(v);
+              onPersist({ ga_id: id || null });
+            }}
           />
           <MetricField
             label="TikTok"
             badge="NOVO"
-            hint="Adicione seu TikTok Events Manager ID."
+            hint="Adicione seu TikTok Events Manager ID (ou cole o código)."
             value={form.tiktok_pixel_id ?? ""}
             placeholder="Padrão da conta"
-            onSave={(v) => onPersist({ tiktok_pixel_id: v.trim() || null })}
+            onSave={(v) => {
+              const id = extractTikTokId(v);
+              onPersist({ tiktok_pixel_id: id || null });
+            }}
           />
         </div>
       </section>
