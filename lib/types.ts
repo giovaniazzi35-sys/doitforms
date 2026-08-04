@@ -44,6 +44,7 @@ export interface FieldConfig {
   redirectUrl?: string; // thankyou redirect
   placeholder?: string;
   imageUrl?: string;
+  align?: "left" | "center" | "right"; // text alignment of title/description
   // multiple_choice options
   multiple?: boolean; // allow selecting many
   shuffle?: boolean; // randomize option order

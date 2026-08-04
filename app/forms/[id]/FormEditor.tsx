@@ -14,8 +14,7 @@ import {
   updateForm,
 } from "./actions";
 import { StepList } from "@/components/editor/StepList";
-import { FieldEditor } from "@/components/editor/FieldEditor";
-import { FormRenderer } from "@/components/FormRenderer";
+import { InlineEditor } from "@/components/editor/InlineEditor";
 import { OptionsTab } from "@/components/editor/OptionsTab";
 import { ShareTab } from "@/components/editor/ShareTab";
 import { ResponsesTab } from "@/components/editor/ResponsesTab";
@@ -218,44 +217,41 @@ export function FormEditor({
       <div className="min-h-0 flex-1 overflow-hidden">
         {tab === "editor" && (
           <div className="flex h-full">
-            <StepList
-              fields={fields}
-              selectedId={selected?.id ?? ""}
-              onSelect={setSelectedId}
-              onAdd={handleAddField}
-              onMove={move}
-              onDelete={handleDeleteField}
-            />
-            <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-2">
-              <div className="thin-scroll overflow-y-auto border-r border-slate-100 bg-white p-6">
-                {selected ? (
-                  <FieldEditor
-                    key={selected.id}
-                    field={selected}
-                    allFields={fields}
-                    onChange={(patch) => patchField(selected.id, patch)}
-                    onSave={(patch) => saveField(selected.id, patch)}
-                  />
-                ) : (
-                  <p className="text-sm text-slate-400">
-                    Adicione um campo para começar.
-                  </p>
-                )}
-              </div>
-              <div className="hidden bg-slate-100 lg:block">
-                <div className="h-full overflow-hidden">
-                  <div className="mx-auto flex h-full max-w-md items-center justify-center p-4">
-                    <div className="h-[90%] w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
-                      <FormRenderer
-                        form={form}
-                        fields={fields}
-                        mode="preview"
-                        forcedIndex={selectedIndex}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="hidden md:flex">
+              <StepList
+                fields={fields}
+                selectedId={selected?.id ?? ""}
+                onSelect={setSelectedId}
+                onAdd={handleAddField}
+                onMove={move}
+                onDelete={handleDeleteField}
+              />
+            </div>
+            <div className="min-h-0 flex-1">
+              {selected ? (
+                <InlineEditor
+                  key={selected.id}
+                  form={form}
+                  field={selected}
+                  allFields={fields}
+                  index={selectedIndex}
+                  total={fields.length}
+                  onChange={(patch) => patchField(selected.id, patch)}
+                  onSave={(patch) => saveField(selected.id, patch)}
+                  onPrev={() => {
+                    const p = fields[selectedIndex - 1];
+                    if (p) setSelectedId(p.id);
+                  }}
+                  onNext={() => {
+                    const n = fields[selectedIndex + 1];
+                    if (n) setSelectedId(n.id);
+                  }}
+                />
+              ) : (
+                <p className="p-8 text-sm text-slate-400">
+                  Adicione um campo para começar.
+                </p>
+              )}
             </div>
           </div>
         )}

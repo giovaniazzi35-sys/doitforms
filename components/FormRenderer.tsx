@@ -705,17 +705,22 @@ function StepBody({
 }) {
   const qColor = style.questionColor;
   const aColor = style.answerColor;
+  const align = field.config?.align || "center";
+  const alignClass =
+    align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
   const heading = (
-    <div className="text-center">
+    <div className={alignClass}>
       <h2
-        className="text-2xl font-bold leading-snug sm:text-3xl"
+        className="whitespace-pre-line text-2xl font-bold leading-snug sm:text-3xl"
         style={{ color: qColor }}
       >
         {field.title}
       </h2>
       {field.description && (
-        <p className="mt-3 text-base text-slate-500">{field.description}</p>
+        <p className="mt-3 whitespace-pre-line text-base text-slate-500">
+          {field.description}
+        </p>
       )}
     </div>
   );
@@ -751,7 +756,7 @@ function StepBody({
             onChange={(e) => setValue(e.target.value)}
             placeholder={field.config?.placeholder || "Sua resposta"}
             className={inputBase}
-            style={{ borderColor: aColor, color: aColor }}
+            style={{ borderColor: aColor, color: aColor, textAlign: align }}
           />
         ) : field.type === "multiple_choice" ? (
           <ChoiceField
@@ -777,7 +782,7 @@ function StepBody({
             }}
             placeholder={field.config?.placeholder || "Sua resposta"}
             className={inputBase}
-            style={{ borderColor: aColor, color: aColor }}
+            style={{ borderColor: aColor, color: aColor, textAlign: align }}
           />
         )}
       </div>
