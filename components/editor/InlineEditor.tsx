@@ -41,7 +41,7 @@ export function InlineEditor({
   const [showSettings, setShowSettings] = useState(false);
   const style = { ...DEFAULT_STYLE, ...form.style };
   const cfg = field.config || {};
-  const align: Align = cfg.align || "center";
+  const align: Align = cfg.align || "left";
   const radius = `${style.borderRadius ?? 8}px`;
   const isScreen = field.type === "welcome" || field.type === "thankyou";
   const isChoice = field.type === "multiple_choice";
@@ -143,9 +143,12 @@ export function InlineEditor({
               onChange={(v) => onChange({ description: v })}
               onBlur={(v) => onSave({ description: v })}
               placeholder="Descrição (opcional) — pressione Enter para quebrar linha"
-              className={`mt-3 w-full resize-none whitespace-pre-line bg-transparent text-base text-slate-500 outline-none ${alignClass}`}
-              style={{ textAlign: align }}
+              className={`mt-4 w-full resize-none whitespace-pre-line bg-transparent text-base leading-relaxed opacity-80 outline-none ${alignClass}`}
+              style={{ textAlign: align, color: style.questionColor }}
             />
+            <p className={`mt-1 text-xs text-slate-400 ${alignClass}`}>
+              Enter quebra a linha · **texto** vira <strong>negrito</strong>
+            </p>
 
             {/* type-specific inline editing */}
             {isChoice && (

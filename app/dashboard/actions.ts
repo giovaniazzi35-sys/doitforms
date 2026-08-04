@@ -43,11 +43,12 @@ export async function createForm(formData: FormData) {
       form_id: form.id,
       position: 0,
       type: "welcome",
-      title: "🚀 Bem-vindo! Vamos começar?",
-      description: "Responda algumas perguntas rápidas para continuar.",
+      title: "🚀 Bem-vindo! **Vamos começar?**",
+      description:
+        "🏆 **Rápido**: leva menos de 2 minutos\n📈 **Simples**: uma pergunta por vez\n✅ **Seguro**: seus dados ficam protegidos",
       required: false,
       options: [],
-      config: { buttonText: "Começar →" },
+      config: { buttonText: "Começar →", align: "left" },
     },
     {
       form_id: form.id,

@@ -380,7 +380,7 @@ export function FormRenderer({
             >
               {dq.title || "Obrigado pelo seu interesse!"}
             </h2>
-            <p className="mt-3 text-base text-slate-500">
+            <p className="mt-3 whitespace-pre-line text-base text-slate-500">
               {dq.message ||
                 "No momento seu perfil não se encaixa no que buscamos, mas agradecemos a sua participação."}
             </p>
@@ -437,7 +437,15 @@ export function FormRenderer({
             <p className="mt-3 text-sm font-medium text-rose-500">{error}</p>
           )}
 
-          <div className="mt-8 flex items-center gap-3">
+          <div
+            className={`mt-8 flex flex-wrap items-center gap-3 ${
+              (current.config?.align || "left") === "center"
+                ? "justify-center"
+                : (current.config?.align || "left") === "right"
+                  ? "justify-end"
+                  : "justify-start"
+            }`}
+          >
             {current.type === "thankyou" ? (
               current.config?.redirectUrl ? (
                 <p className="text-sm text-slate-400">Redirecionando...</p>
@@ -447,7 +455,7 @@ export function FormRenderer({
                 <button
                   onClick={goNext}
                   disabled={submitting}
-                  className="rounded-lg px-6 py-3 text-base font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-60"
+                  className="w-full rounded-lg px-6 py-3 text-center text-base font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-60 sm:w-auto"
                   style={{ backgroundColor: style.buttonColor, borderRadius: radius }}
                 >
                   {submitting
@@ -472,7 +480,15 @@ export function FormRenderer({
 
           {/* Custom tracked buttons (welcome / thank-you screens) */}
           {(current.config?.buttons?.length ?? 0) > 0 && (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div
+              className={`mt-4 flex flex-wrap items-center gap-3 ${
+                (current.config?.align || "left") === "center"
+                  ? "justify-center"
+                  : (current.config?.align || "left") === "right"
+                    ? "justify-end"
+                    : "justify-start"
+              }`}
+            >
               {current.config!.buttons!.map((b) => (
                 <button
                   key={b.id}
@@ -509,6 +525,21 @@ function isLastQuestion(ordered: FormField[], index: number): boolean {
 }
 
 const OTHER_SEP = " | ";
+
+/** Lightweight rich text: **trecho** vira negrito (title/description). */
+function renderRich(text: string): React.ReactNode {
+  if (!text || !text.includes("**")) return text;
+  const parts = text.split("**");
+  return parts.map((p, i) =>
+    i % 2 === 1 ? (
+      <strong key={i} className="font-extrabold">
+        {p}
+      </strong>
+    ) : (
+      p
+    ),
+  );
+}
 
 /** Deterministic shuffle (seeded by field id) so SSR and client agree. */
 function seededShuffle<T>(arr: T[], seedStr: string): T[] {
@@ -705,7 +736,7 @@ function StepBody({
 }) {
   const qColor = style.questionColor;
   const aColor = style.answerColor;
-  const align = field.config?.align || "center";
+  const align = field.config?.align || "left";
   const alignClass =
     align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
 
@@ -715,11 +746,14 @@ function StepBody({
         className="whitespace-pre-line text-2xl font-bold leading-snug sm:text-3xl"
         style={{ color: qColor }}
       >
-        {field.title}
+        {renderRich(field.title)}
       </h2>
       {field.description && (
-        <p className="mt-3 whitespace-pre-line text-base text-slate-500">
-          {field.description}
+        <p
+          className="mt-4 whitespace-pre-line text-base leading-relaxed opacity-80"
+          style={{ color: qColor }}
+        >
+          {renderRich(field.description)}
         </p>
       )}
     </div>
