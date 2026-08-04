@@ -364,8 +364,8 @@ export function FormRenderer({
         className="relative flex min-h-full w-full flex-col"
         style={{ ...bg, fontFamily: style.font }}
       >
-        <div className="flex flex-1 items-center justify-center px-5 py-10">
-          <div className="w-full max-w-xl animate-fade-up text-center">
+        <div className="flex flex-1 flex-col justify-start px-5 pt-14 pb-16 sm:justify-center sm:py-14">
+          <div className="mx-auto w-full max-w-xl animate-fade-up text-center">
             {style.logo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -413,8 +413,8 @@ export function FormRenderer({
         </div>
       )}
 
-      <div className="flex flex-1 items-center justify-center px-5 py-10">
-        <div className="w-full max-w-xl">
+      <div className="flex flex-1 flex-col justify-start px-5 pt-14 pb-16 sm:justify-center sm:py-14">
+        <div className="mx-auto w-full max-w-xl">
           {style.logo && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
