@@ -5,7 +5,7 @@ import { Logo } from "@/components/Logo";
 import { ContaClient } from "./ContaClient";
 import type { ProfileIntegrations } from "@/lib/types";
 
-export const metadata = { title: "Conta e integrações · Doit Forms" };
+export const metadata = { title: "Conta e integrações · DOITFORMS" };
 export const dynamic = "force-dynamic";
 
 export default async function ContaPage() {

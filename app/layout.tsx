@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "doitforms — Crie formulários inteligentes",
+  title: "DOITFORMS — Crie formulários inteligentes",
   description:
     "Crie formulários, pesquisas e quizzes online com rastreamento de UTM e Meta Pixel. Feito para gerar leads. Pague em real.",
   metadataBase: new URL(

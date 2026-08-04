@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/Logo";
 import { DashboardClient } from "./DashboardClient";
 
-export const metadata = { title: "Meus formulários · doitforms" };
+export const metadata = { title: "Meus formulários · DOITFORMS" };
 
 export default async function DashboardPage() {
   const supabase = await createClient();
