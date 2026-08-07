@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { fbqTrack } from "@/components/MetaPixel";
 import { sendCapiEvent } from "@/lib/capi";
+import { saveResponse } from "@/lib/partial";
 import {
   collectTracking,
   appendUtmToUrl,
@@ -56,6 +56,46 @@ export function FormRenderer({
   const answersRef = useRef<Record<string, string>>({});
   const conversionFired = useRef(false);
   const pageViewSent = useRef(false);
+  const submissionId = useRef<string>("");
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const disqualifiedRef = useRef(false);
+  const completedRef = useRef(false);
+
+  /** Build the answers payload from everything filled so far (non-empty). */
+  function buildPayload() {
+    const cur = answersRef.current;
+    return questionSteps
+      .filter((f) => (cur[f.id] ?? "").trim() !== "")
+      .map((f) => ({
+        field_id: f.id,
+        question_label: f.title,
+        field_type: f.type,
+        value: cur[f.id] ?? "",
+      }));
+  }
+
+  /** Persist whatever is filled so far (partial lead). Fire-and-forget. */
+  function flushPartial(keepalive = false) {
+    if (mode !== "live" || !submissionId.current || completedRef.current) return;
+    const payload = buildPayload();
+    if (payload.length === 0) return; // nothing filled yet
+    void saveResponse({
+      slug: form.slug,
+      submissionId: submissionId.current,
+      completed: false,
+      disqualified: disqualifiedRef.current,
+      tracking: tracking.current as Record<string, unknown>,
+      answers: payload,
+      keepalive,
+    });
+  }
+
+  /** Debounced partial save while the visitor is typing/selecting. */
+  function scheduleSave() {
+    if (mode !== "live") return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => flushPartial(false), 900);
+  }
 
   /** Browser pixel + server CAPI with a shared event_id so Meta deduplicates. */
   function fireDualEvent(
@@ -94,6 +134,26 @@ export function FormRenderer({
   useEffect(() => {
     if (mode !== "live") return;
     tracking.current = collectTracking();
+
+    // Stable submission id per browser session (survives reloads in this tab)
+    // so partial saves keep updating the same response row.
+    const storeKey = `df_sid_${form.slug}`;
+    let sid = "";
+    try {
+      sid = sessionStorage.getItem(storeKey) || "";
+    } catch {
+      /* sessionStorage may be blocked */
+    }
+    if (!sid) {
+      sid = crypto.randomUUID();
+      try {
+        sessionStorage.setItem(storeKey, sid);
+      } catch {
+        /* ignore */
+      }
+    }
+    submissionId.current = sid;
+
     // PageView: the browser event fires in MetaPixel on init; this sends the
     // deduplicated Conversions API counterpart (same event_id) once per load.
     if (!pageViewSent.current && effectivePixelId && pixel.pageViewOnLoad) {
@@ -106,6 +166,17 @@ export function FormRenderer({
         fbc: tracking.current.fbc,
       });
     }
+
+    // Best-effort save if the visitor leaves mid-fill (abandonment capture).
+    const onHide = () => flushPartial(true);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") onHide();
+    });
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
@@ -132,6 +203,7 @@ export function FormRenderer({
   function setAnswer(fieldId: string, value: string) {
     answersRef.current = { ...answersRef.current, [fieldId]: value };
     setAnswers(answersRef.current);
+    scheduleSave(); // debounced partial save while filling
   }
 
   function validate(field: FormField): boolean {
@@ -160,25 +232,20 @@ export function FormRenderer({
     setSubmitting(true);
     setError(null);
     try {
-      const supabase = createClient();
-      const current = answersRef.current;
-      const payload = questionSteps
-        .filter((f) => current[f.id] != null)
-        .map((f) => ({
-          field_id: f.id,
-          question_label: f.title,
-          field_type: f.type,
-          value: current[f.id] ?? "",
-        }));
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      disqualifiedRef.current = !!opts?.disqualified;
 
-      const { error } = await supabase.rpc("df_submit_response", {
-        p_slug: form.slug,
-        p_completed: true,
-        p_tracking: tracking.current,
-        p_answers: payload,
-        p_disqualified: !!opts?.disqualified,
+      // Finalize the SAME response row (upsert by submission id) as completed.
+      const ok = await saveResponse({
+        slug: form.slug,
+        submissionId: submissionId.current,
+        completed: true,
+        disqualified: !!opts?.disqualified,
+        tracking: tracking.current as Record<string, unknown>,
+        answers: buildPayload(),
       });
-      if (error) throw error;
+      if (!ok) throw new Error("save_failed");
+      completedRef.current = true;
 
       if (opts?.disqualified) {
         // Disqualified leads: fire a distinct event, never the Lead conversion.
@@ -250,6 +317,9 @@ export function FormRenderer({
   async function goNext() {
     if (!validate(current)) return;
     setError(null);
+
+    // Persist progress immediately when advancing a step (partial lead).
+    flushPartial(false);
 
     // Per-step event (ViewContent by default) with CAPI dedup.
     if (mode === "live" && effectivePixelId && pixel.perStepEvent) {

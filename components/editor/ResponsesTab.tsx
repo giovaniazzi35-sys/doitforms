@@ -73,6 +73,7 @@ export function ResponsesTab({
     const headers = [
       "identificador",
       "data",
+      "preenchimento",
       "status",
       ...questionFields.map((f) => f.title),
       "utm_source",
@@ -86,6 +87,7 @@ export function ResponsesTab({
     const rows = visible.map((r) => [
       r.submission_id,
       new Date(r.created_at).toLocaleString("pt-BR"),
+      r.completed ? "Completo" : "Parcial",
       r.disqualified ? "Desqualificado" : "Qualificado",
       ...questionFields.map((f) => answerFor(r, f.id).replace(/^—$/, "")),
       r.utm_source || "",
@@ -217,6 +219,11 @@ export function ResponsesTab({
                     <span className="truncate text-sm font-medium text-slate-700">
                       {name}
                     </span>
+                    {!r.completed && !r.disqualified && (
+                      <span className="ml-auto shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                        Parcial
+                      </span>
+                    )}
                     {r.disqualified && <DqDot />}
                   </div>
                   <p className="mt-0.5 text-xs text-slate-400">
@@ -281,15 +288,30 @@ function DqDot() {
   );
 }
 
-function StatusBadge({ disqualified }: { disqualified: boolean }) {
-  return disqualified ? (
-    <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 ring-1 ring-rose-100">
-      ✕ Desqualificado
-    </span>
-  ) : (
-    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-      ✓ Qualificado
-    </span>
+function StatusBadge({
+  disqualified,
+  completed,
+}: {
+  disqualified: boolean;
+  completed: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {completed ? (
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+          ✓ Completo
+        </span>
+      ) : (
+        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
+          ✎ Parcial
+        </span>
+      )}
+      {disqualified && (
+        <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 ring-1 ring-rose-100">
+          ✕ Desqualificado
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -315,7 +337,10 @@ function DetailView({
             </p>
             <p>Identificador: {response.submission_id}</p>
           </div>
-          <StatusBadge disqualified={response.disqualified} />
+          <StatusBadge
+            disqualified={response.disqualified}
+            completed={response.completed}
+          />
         </div>
 
         <div className="space-y-5">
