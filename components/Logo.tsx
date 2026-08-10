@@ -5,26 +5,39 @@ export function Logo({
   mark = true,
   size = 30,
   subtitle = false,
-  textClass = "text-[#4A2D16]",
+  dark = false,
 }: {
   className?: string;
   mark?: boolean;
   size?: number;
   subtitle?: boolean;
-  textClass?: string;
+  /** Force white text (for dark backgrounds) */
+  dark?: boolean;
 }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span className={`inline-flex items-center gap-2.5 ${className}`}>
       {mark && <LogoMark size={size} />}
       <span className="flex flex-col leading-none">
-        <span
-          className={`text-xl font-extrabold uppercase tracking-tight ${textClass}`}
-        >
-          Doit&nbsp;Forms
+        <span className="flex items-baseline leading-none">
+          <span
+            className="font-extrabold tracking-tight"
+            style={{ color: dark ? "#fff" : "#2563EB", fontSize: size * 0.8 }}
+          >
+            DOIT
+          </span>
+          <span
+            className="font-extrabold tracking-tight"
+            style={{ color: dark ? "#d1d5db" : "#0F172A", fontSize: size * 0.8 }}
+          >
+            FORMS
+          </span>
         </span>
         {subtitle && (
-          <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.28em] text-[#6B4A2A]">
-            Formulário traqueado
+          <span
+            className="mt-1 font-semibold uppercase tracking-[0.22em]"
+            style={{ fontSize: size * 0.26, color: dark ? "#9ca3af" : "#64748b" }}
+          >
+            Formulários • Simples • Inteligentes
           </span>
         )}
       </span>

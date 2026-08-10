@@ -1,80 +1,56 @@
-/**
- * doitforms mascot — smiling notepad (brand logo supplied by the owner,
- * recreated as inline SVG so it scales crisply everywhere).
- */
 export function LogoMark({ size = 32 }: { size?: number }) {
   return (
     <svg
       width={size}
-      height={size}
-      viewBox="0 0 512 512"
+      height={size * (265 / 250)}
+      viewBox="0 0 250 265"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden
     >
-      <g transform="rotate(7 256 250)">
-        {/* back page flaps */}
-        <path
-          d="M150 150 C120 210 118 290 138 350 L172 340 C154 285 156 215 178 160 Z"
-          fill="#D9A85C"
-          stroke="#4A2D16"
-          strokeWidth="12"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M185 145 C158 210 156 295 176 358 L208 348 C190 292 192 216 212 155 Z"
-          fill="#E8C27C"
-          stroke="#4A2D16"
-          strokeWidth="12"
-          strokeLinejoin="round"
-        />
-        {/* body */}
-        <rect
-          x="170"
-          y="128"
-          width="212"
-          height="268"
-          rx="30"
-          fill="#F2CE8A"
-          stroke="#4A2D16"
-          strokeWidth="14"
-        />
-        {/* stacked bottom pages */}
-        <path
-          d="M182 388 q106 26 200 -6"
-          stroke="#4A2D16"
-          strokeWidth="9"
-          fill="none"
-          strokeLinecap="round"
-        />
-        {/* top roll (flipped cover) */}
-        <path
-          d="M150 132 q10 -44 62 -46 l150 -6 q52 0 56 38 q2 30 -36 34 l-196 10 q-34 2 -36 -30 z"
-          fill="#EFC47F"
-          stroke="#4A2D16"
-          strokeWidth="14"
-          strokeLinejoin="round"
-        />
-        <ellipse cx="352" cy="104" rx="26" ry="10" fill="#FBE7BC" />
-        {/* eyes */}
-        <ellipse cx="252" cy="240" rx="17" ry="24" fill="#3B2412" />
-        <ellipse cx="318" cy="234" rx="17" ry="24" fill="#3B2412" />
-        <circle cx="246" cy="230" r="6" fill="#fff" />
-        <circle cx="312" cy="224" r="6" fill="#fff" />
-        {/* mouth */}
-        <path
-          d="M232 292 q56 34 116 -8 q4 44 -34 62 q-44 20 -70 -12 q-14 -18 -12 -42 z"
-          fill="#3B2412"
-        />
-        <path
-          d="M238 290 l104 -7 l-4 22 l-98 8 z"
-          fill="#fff"
-        />
-        <path
-          d="M262 336 q26 16 52 -4 q-6 24 -28 24 q-20 0 -24 -20 z"
-          fill="#E77C8F"
-        />
-      </g>
+      <defs>
+        <linearGradient id="dGrad" x1="0.15" y1="0" x2="0.85" y2="1" gradientUnits="objectBoundingBox">
+          <stop offset="0%" stopColor="#5BA4F5" />
+          <stop offset="50%" stopColor="#2E72E6" />
+          <stop offset="100%" stopColor="#1D4ED8" />
+        </linearGradient>
+      </defs>
+
+      {/* ── Outer D shape (full blue) ── */}
+      <path
+        d="M 26,18 L 112,18
+           C 228,18 244,80 244,133
+           C 244,186 228,248 112,248
+           L 26,248 Z"
+        fill="url(#dGrad)"
+      />
+
+      {/* ── Inner belly cutout — creates the D ring effect ── */}
+      <path
+        d="M 80,66 L 112,66
+           C 184,66 190,99 190,133
+           C 190,167 184,200 112,200
+           L 80,200 Z"
+        fill="white"
+      />
+
+      {/* ── Dark navy spine (vertical bar with document lines) ── */}
+      <rect x="26" y="66" width="58" height="134" rx="3" fill="#1B2A4A" />
+
+      {/* ── White form lines ── */}
+      <rect x="40" y="88"  width="32" height="7" rx="3.5" fill="white" opacity="0.92" />
+      <rect x="40" y="110" width="32" height="7" rx="3.5" fill="white" opacity="0.92" />
+      <rect x="40" y="132" width="26" height="7" rx="3.5" fill="white" opacity="0.92" />
+
+      {/* ── Blue checkmark ── */}
+      <path
+        d="M 40,166 L 56,182 L 88,150"
+        stroke="#4A96F5"
+        strokeWidth="10"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
     </svg>
   );
 }
