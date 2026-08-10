@@ -9,6 +9,7 @@ import type {
   NotificationSettings,
   PopupSettings,
   TimerSettings,
+  TimerPosition,
 } from "@/lib/types";
 import { DEFAULT_STYLE, DEFAULT_PIXEL_CONFIG } from "@/lib/types";
 import { deleteAllResponses, deleteFormAndRedirect } from "@/app/forms/[id]/actions";
@@ -288,108 +289,172 @@ export function OptionsTab({
       {/* ── Cronômetro ── */}
       <Section
         title="Cronômetro regressivo"
-        subtitle="Exibe uma barra de contagem regressiva no topo do formulário para criar urgência."
+        subtitle="Barra ou badge flutuante com contagem regressiva para criar urgência."
       >
         <div className="space-y-4">
           <Toggle
             label="Ativar cronômetro"
-            desc="Aparece no topo do formulário para todos os visitantes."
+            desc="Visível para todos os visitantes do formulário publicado."
             checked={!!timer.enabled}
             onChange={(v) => patchTimer({ enabled: v })}
           />
           {timer.enabled && (
             <>
+              {/* Position selector */}
+              <div>
+                <p className="mb-2 text-sm font-medium text-slate-700">Posição</p>
+                <div className="space-y-1.5">
+                  {/* Top bar */}
+                  <button
+                    onClick={() => patchTimer({ position: "top" })}
+                    className={`flex w-full items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm transition ${
+                      (timer.position ?? "top") === "top"
+                        ? "border-brand-500 bg-brand-50 font-semibold text-brand-700"
+                        : "border-slate-200 text-slate-600 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="text-base">━━</span> Barra no topo (largura total)
+                  </button>
+                  {/* Float grid */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([
+                      ["float-tl", "↖", "Sup. esq."],
+                      ["float-tc", "↑", "Sup. centro"],
+                      ["float-tr", "↗", "Sup. dir."],
+                      ["float-bl", "↙", "Inf. esq."],
+                      ["float-bc", "↓", "Inf. centro"],
+                      ["float-br", "↘", "Inf. dir."],
+                    ] as [TimerPosition, string, string][]).map(([id, icon, label]) => (
+                      <button
+                        key={id}
+                        onClick={() => patchTimer({ position: id })}
+                        className={`flex flex-col items-center rounded-lg border-2 px-2 py-2 text-xs transition ${
+                          timer.position === id
+                            ? "border-brand-500 bg-brand-50 font-semibold text-brand-700"
+                            : "border-slate-200 text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        <span className="text-lg leading-none">{icon}</span>
+                        <span className="mt-0.5">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Alignment */}
+              <Row label="Alinhamento do conteúdo">
+                <div className="flex gap-1">
+                  {(["left", "center", "right"] as const).map((a) => (
+                    <button
+                      key={a}
+                      onClick={() => patchTimer({ align: a })}
+                      className={`flex-1 rounded-lg border py-1.5 text-sm transition ${
+                        (timer.align ?? "left") === a
+                          ? "border-brand-500 bg-brand-50 font-semibold text-brand-700"
+                          : "border-slate-200 text-slate-500 hover:border-slate-300"
+                      }`}
+                    >
+                      {a === "left" ? "⬅ Esq." : a === "center" ? "↔ Centro" : "Dir. ➡"}
+                    </button>
+                  ))}
+                </div>
+              </Row>
+
+              {/* Label text */}
               <Row label="Texto do rótulo">
-                <input
-                  defaultValue={timer.label || ""}
-                  onBlur={(e) => patchTimer({ label: e.target.value })}
-                  placeholder="⏰ Oferta expira em:"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
-                />
-              </Row>
-              <Row label="Duração (minutos)">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <input
-                    type="range"
-                    min={1}
-                    max={60}
-                    step={1}
+                    defaultValue={timer.label || ""}
+                    onBlur={(e) => patchTimer({ label: e.target.value })}
+                    placeholder="⏰ Oferta expira em:"
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+                  />
+                  <Toggle
+                    label=""
+                    checked={timer.showLabel !== false}
+                    onChange={(v) => patchTimer({ showLabel: v })}
+                  />
+                </div>
+              </Row>
+
+              {/* Duration */}
+              <Row label="Duração">
+                <div className="flex items-center gap-2">
+                  <Stepper
                     value={Math.round((timer.durationSeconds ?? 600) / 60)}
-                    onChange={(e) => patchTimer({ durationSeconds: Number(e.target.value) * 60 })}
-                    className="w-full accent-brand-600"
+                    min={1}
+                    max={180}
+                    step={1}
+                    onChange={(v) => patchTimer({ durationSeconds: v * 60 })}
+                    format={(v) => `${v} min`}
                   />
-                  <span className="w-10 text-right text-sm font-medium text-slate-600">
-                    {Math.round((timer.durationSeconds ?? 600) / 60)}min
-                  </span>
                 </div>
               </Row>
-              <Row label="Alerta nos últimos (segundos)">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min={10}
-                    max={300}
-                    step={10}
-                    value={timer.urgencyThreshold ?? 60}
-                    onChange={(e) => patchTimer({ urgencyThreshold: Number(e.target.value) })}
-                    className="w-full accent-brand-600"
-                  />
-                  <span className="w-14 text-right text-sm font-medium text-slate-600">
-                    {timer.urgencyThreshold ?? 60}s
-                  </span>
-                </div>
-              </Row>
-              <Row label="Reiniciar automaticamente">
-                <Toggle
-                  label="Ao chegar a zero, reinicia a contagem"
-                  checked={!!timer.autoRestart}
-                  onChange={(v) => patchTimer({ autoRestart: v })}
+
+              {/* Auto-restart */}
+              <Toggle
+                label="Reiniciar automaticamente"
+                desc="Ao chegar a zero, a contagem recomeça."
+                checked={!!timer.autoRestart}
+                onChange={(v) => patchTimer({ autoRestart: v })}
+              />
+
+              {/* Urgency threshold */}
+              <Row label="Alerta de urgência nos últimos">
+                <Stepper
+                  value={timer.urgencyThreshold ?? 60}
+                  min={10}
+                  max={600}
+                  step={10}
+                  onChange={(v) => patchTimer({ urgencyThreshold: v })}
+                  format={(v) => `${v}s`}
                 />
               </Row>
-              <Row label="Tamanho do texto">
+
+              {/* Font family */}
+              <Row label="Fonte">
                 <select
-                  value={timer.fontSize || "md"}
-                  onChange={(e) => patchTimer({ fontSize: e.target.value as "sm" | "md" | "lg" })}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+                  value={timer.fontFamily || "Inter"}
+                  onChange={(e) => patchTimer({ fontFamily: e.target.value })}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
                 >
-                  <option value="sm">Pequeno</option>
-                  <option value="md">Médio</option>
-                  <option value="lg">Grande</option>
+                  {GOOGLE_FONTS.map((f) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
                 </select>
               </Row>
-              <Row label="Cor do texto">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={timer.color || "#ffffff"}
-                    onChange={(e) => patchTimer({ color: e.target.value })}
-                    className="h-9 w-16 cursor-pointer rounded border border-slate-200 p-0.5"
-                  />
-                  <span className="text-sm text-slate-500">{timer.color || "#ffffff"}</span>
-                </div>
+
+              {/* Font size */}
+              <Row label="Tamanho do dígitos (px)">
+                <Stepper
+                  value={timer.fontSize ?? 20}
+                  min={12}
+                  max={72}
+                  step={2}
+                  onChange={(v) => patchTimer({ fontSize: v })}
+                  format={(v) => `${v}px`}
+                />
               </Row>
-              <Row label="Cor de fundo">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={timer.backgroundColor || "#0f172a"}
-                    onChange={(e) => patchTimer({ backgroundColor: e.target.value })}
-                    className="h-9 w-16 cursor-pointer rounded border border-slate-200 p-0.5"
+
+              {/* Border radius (float only) */}
+              {(timer.position ?? "top") !== "top" && (
+                <Row label="Arredondamento (px)">
+                  <Stepper
+                    value={timer.borderRadius ?? 12}
+                    min={0}
+                    max={32}
+                    step={2}
+                    onChange={(v) => patchTimer({ borderRadius: v })}
+                    format={(v) => `${v}px`}
                   />
-                  <span className="text-sm text-slate-500">{timer.backgroundColor || "#0f172a"}</span>
-                </div>
-              </Row>
-              <Row label="Cor de urgência">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={timer.urgencyBackgroundColor || "#dc2626"}
-                    onChange={(e) => patchTimer({ urgencyBackgroundColor: e.target.value })}
-                    className="h-9 w-16 cursor-pointer rounded border border-slate-200 p-0.5"
-                  />
-                  <span className="text-sm text-slate-500">{timer.urgencyBackgroundColor || "#dc2626"}</span>
-                </div>
-              </Row>
+                </Row>
+              )}
+
+              {/* Colors */}
+              <ColorRow label="Cor do texto" value={timer.color || "#ffffff"} onChange={(v) => patchTimer({ color: v })} />
+              <ColorRow label="Cor de fundo" value={timer.backgroundColor || "#0f172a"} onChange={(v) => patchTimer({ backgroundColor: v })} />
+              <ColorRow label="Cor de urgência" value={timer.urgencyBackgroundColor || "#dc2626"} onChange={(v) => patchTimer({ urgencyBackgroundColor: v })} />
             </>
           )}
         </div>
@@ -691,6 +756,44 @@ function Toggle({
             checked ? "left-[22px]" : "left-0.5"
           }`}
         />
+      </button>
+    </div>
+  );
+}
+
+function Stepper({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  format,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+  format?: (v: number) => string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => onChange(Math.max(min, value - step))}
+        disabled={value <= min}
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+      >
+        −
+      </button>
+      <span className="w-20 text-center text-sm font-semibold text-slate-700">
+        {format ? format(value) : value}
+      </span>
+      <button
+        onClick={() => onChange(Math.min(max, value + step))}
+        disabled={value >= max}
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+      >
+        +
       </button>
     </div>
   );

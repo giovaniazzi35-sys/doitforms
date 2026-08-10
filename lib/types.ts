@@ -79,16 +79,26 @@ export interface PopupSettings {
   author?: string;
 }
 
+export type TimerPosition =
+  | "top"
+  | "float-tl" | "float-tc" | "float-tr"
+  | "float-bl" | "float-bc" | "float-br";
+
 export interface TimerSettings {
   enabled?: boolean;
-  durationSeconds?: number;      // default 600 (10 min)
+  durationSeconds?: number;        // default 600 (10 min)
   autoRestart?: boolean;
-  label?: string;                // e.g. "⏰ Oferta expira em:"
-  color?: string;                // text color, default #ffffff
-  backgroundColor?: string;      // bar bg, default #0f172a
-  urgencyThreshold?: number;     // secs left when urgency kicks in, default 60
+  label?: string;                  // "⏰ Oferta expira em:"
+  showLabel?: boolean;             // default true
+  color?: string;                  // text color, default #ffffff
+  backgroundColor?: string;        // bar/badge bg, default #0f172a
+  urgencyThreshold?: number;       // secs, default 60
   urgencyBackgroundColor?: string; // default #dc2626
-  fontSize?: "sm" | "md" | "lg";
+  fontSize?: number;               // px for clock digits, default 20
+  fontFamily?: string;             // google font name
+  position?: TimerPosition;        // default "top"
+  align?: "left" | "center" | "right"; // content alignment
+  borderRadius?: number;           // px, default 0 for bar / 12 for float
 }
 
 export interface NotificationSettings {
