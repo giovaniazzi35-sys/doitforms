@@ -60,7 +60,7 @@ export default async function PublicFormPage({
   const pageViewEventId = crypto.randomUUID();
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-dvh flex-col">
       <MetaPixel
         pixelId={data.tracking.pixel_id}
         firePageView={true}

@@ -238,6 +238,9 @@ export function FormEditor({
                   total={fields.length}
                   onChange={(patch) => patchField(selected.id, patch)}
                   onSave={(patch) => saveField(selected.id, patch)}
+                  onStylePatch={(patch) =>
+                    persistForm({ style: { ...form.style, ...patch } })
+                  }
                   onPrev={() => {
                     const p = fields[selectedIndex - 1];
                     if (p) setSelectedId(p.id);

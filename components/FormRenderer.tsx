@@ -453,10 +453,10 @@ export function FormRenderer({
     const dq = form.settings?.disqualify || {};
     return (
       <div
-        className="relative flex min-h-full w-full flex-col"
+        className="relative flex flex-1 flex-col w-full"
         style={{ ...bg, fontFamily: style.font }}
       >
-        <div className="flex flex-1 flex-col justify-start px-5 pt-14 pb-16 sm:justify-center sm:py-14">
+        <div className="flex flex-1 flex-col justify-center px-5 py-10">
           <div className="mx-auto w-full max-w-xl animate-fade-up text-center">
             {style.logo && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -492,7 +492,7 @@ export function FormRenderer({
 
   return (
     <div
-      className="relative flex min-h-full w-full flex-col"
+      className="relative flex flex-1 flex-col w-full"
       style={{ ...bg, fontFamily: style.font }}
     >
       {/* progress bar */}
@@ -505,7 +505,7 @@ export function FormRenderer({
         </div>
       )}
 
-      <div className="flex flex-1 flex-col justify-start px-5 pt-14 pb-16 sm:justify-center sm:py-14">
+      <div className="flex flex-1 flex-col justify-center px-5 py-10">
         <div className="mx-auto w-full max-w-xl">
           {style.logo && (
             // eslint-disable-next-line @next/next/no-img-element

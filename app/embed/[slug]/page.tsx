@@ -30,7 +30,7 @@ export default async function EmbedFormPage({
   const pageViewEventId = crypto.randomUUID();
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-dvh flex-col">
       <MetaPixel
         pixelId={tracking.pixel_id}
         firePageView={true}

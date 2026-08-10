@@ -6,9 +6,17 @@ import {
   FIELD_TYPE_LABELS,
   type DoitForm,
   type FormField,
+  type FormStyle,
   type FieldOption,
 } from "@/lib/types";
-import { getGoogleFontUrl } from "@/lib/themes";
+import {
+  getGoogleFontUrl,
+  GOOGLE_FONTS,
+  THEME_PRESETS,
+  TEXT_ANIMATIONS,
+  BUTTON_ANIMATIONS,
+  FONT_SIZE_SCALES,
+} from "@/lib/themes";
 import { FieldEditor } from "./FieldEditor";
 
 type Align = "left" | "center" | "right";
@@ -18,6 +26,8 @@ type Align = "left" | "center" | "right";
  * preview). Handles text alignment and preserves line breaks. Advanced
  * settings live in a collapsible panel so every feature stays reachable.
  */
+type Panel = "none" | "settings" | "style";
+
 export function InlineEditor({
   form,
   field,
@@ -26,6 +36,7 @@ export function InlineEditor({
   total,
   onChange,
   onSave,
+  onStylePatch,
   onPrev,
   onNext,
 }: {
@@ -36,10 +47,17 @@ export function InlineEditor({
   total: number;
   onChange: (patch: Partial<FormField>) => void;
   onSave: (patch: Record<string, unknown>) => void;
+  onStylePatch: (patch: Partial<FormStyle>) => void;
   onPrev: () => void;
   onNext: () => void;
 }) {
-  const [showSettings, setShowSettings] = useState(false);
+  const [panel, setPanel] = useState<Panel>("none");
+  const showSettings = panel === "settings";
+  const showStyle = panel === "style";
+
+  function togglePanel(p: Panel) {
+    setPanel((cur) => (cur === p ? "none" : p));
+  }
   const style = { ...DEFAULT_STYLE, ...form.style };
 
   // Load Google Font in the editor canvas so the preview matches the published form.
@@ -112,16 +130,28 @@ export function InlineEditor({
           <AlignBtn active={align === "right"} onClick={() => setAlign("right")} icon="➡" title="Alinhar à direita" />
         </div>
 
-        <button
-          onClick={() => setShowSettings((s) => !s)}
-          className={`ml-auto rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
-            showSettings
-              ? "border-brand-300 bg-brand-50 text-brand-700"
-              : "border-slate-200 text-slate-600 hover:bg-slate-50"
-          }`}
-        >
-          ⚙ Configurações avançadas
-        </button>
+        <div className="ml-auto flex items-center gap-1.5">
+          <button
+            onClick={() => togglePanel("style")}
+            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+              showStyle
+                ? "border-brand-300 bg-brand-50 text-brand-700"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            🎨 Estilo
+          </button>
+          <button
+            onClick={() => togglePanel("settings")}
+            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+              showSettings
+                ? "border-brand-300 bg-brand-50 text-brand-700"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            ⚙ Campo
+          </button>
+        </div>
       </div>
 
       {/* editable surface + settings */}
@@ -256,9 +286,125 @@ export function InlineEditor({
           </div>
         </div>
 
-        {/* advanced settings drawer */}
+        {/* style panel */}
+        {showStyle && (
+          <div className="thin-scroll max-h-[55%] overflow-y-auto border-t border-slate-200 bg-white p-4 lg:max-h-none lg:w-80 lg:border-l lg:border-t-0">
+            <h3 className="mb-3 text-sm font-bold text-slate-700">Aparência do formulário</h3>
+
+            {/* Theme presets */}
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Temas</p>
+            <div className="mb-4 grid grid-cols-2 gap-1.5">
+              {THEME_PRESETS.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => onStylePatch(t.style as FormStyle)}
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 text-left text-xs transition hover:border-brand-300 hover:bg-brand-50"
+                >
+                  <span
+                    className="h-4 w-4 shrink-0 rounded-full border border-slate-200"
+                    style={{ backgroundColor: t.style.buttonColor }}
+                  />
+                  <span className="truncate font-medium text-slate-700">{t.emoji} {t.name}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Font */}
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Fonte</p>
+            <select
+              value={style.font || "Inter"}
+              onChange={(e) => onStylePatch({ font: e.target.value })}
+              className="mb-4 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-brand-400"
+            >
+              {GOOGLE_FONTS.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+
+            {/* Font size scale */}
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Tamanho do texto</p>
+            <div className="mb-4 grid grid-cols-4 gap-1">
+              {FONT_SIZE_SCALES.map((s) => {
+                const active = (style.fontSizeScale || "md") === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => onStylePatch({ fontSizeScale: s.id as FormStyle["fontSizeScale"] })}
+                    className={`rounded-lg border py-1.5 text-center text-xs font-medium transition ${
+                      active
+                        ? "border-brand-500 bg-brand-50 text-brand-700"
+                        : "border-slate-200 text-slate-500 hover:border-slate-300"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Colors */}
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Cores</p>
+            <div className="mb-4 space-y-2">
+              {[
+                { label: "Botão", key: "buttonColor" },
+                { label: "Pergunta", key: "questionColor" },
+                { label: "Resposta", key: "answerColor" },
+                { label: "Fundo", key: "backgroundColor" },
+              ].map(({ label, key }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={(style as Record<string, string>)[key] || "#000000"}
+                    onChange={(e) => onStylePatch({ [key]: e.target.value } as Partial<FormStyle>)}
+                    className="h-7 w-8 cursor-pointer rounded border border-slate-200"
+                  />
+                  <span className="text-xs text-slate-600">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Text animation */}
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Animação do texto</p>
+            <select
+              value={style.textAnimation || "none"}
+              onChange={(e) => onStylePatch({ textAnimation: e.target.value })}
+              className="mb-4 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-brand-400"
+            >
+              {TEXT_ANIMATIONS.map((a) => (
+                <option key={a.id} value={a.id}>{a.label}</option>
+              ))}
+            </select>
+
+            {/* Button animation */}
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Animação do botão</p>
+            <select
+              value={style.buttonAnimation || "none"}
+              onChange={(e) => onStylePatch({ buttonAnimation: e.target.value })}
+              className="mb-4 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-brand-400"
+            >
+              {BUTTON_ANIMATIONS.map((a) => (
+                <option key={a.id} value={a.id}>{a.label}</option>
+              ))}
+            </select>
+
+            {/* Border radius */}
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Bordas — {style.borderRadius ?? 8}px
+            </p>
+            <input
+              type="range"
+              min={0}
+              max={24}
+              value={style.borderRadius ?? 8}
+              onChange={(e) => onStylePatch({ borderRadius: Number(e.target.value) })}
+              className="w-full accent-brand-600"
+            />
+          </div>
+        )}
+
+        {/* field settings drawer */}
         {showSettings && (
-          <div className="thin-scroll max-h-[45%] overflow-y-auto border-t border-slate-200 bg-white p-5 lg:max-h-none lg:w-96 lg:border-l lg:border-t-0">
+          <div className="thin-scroll max-h-[45%] overflow-y-auto border-t border-slate-200 bg-white p-5 lg:max-h-none lg:w-80 lg:border-l lg:border-t-0">
             <h3 className="mb-4 text-sm font-bold text-slate-700">
               Configurações do campo
             </h3>
