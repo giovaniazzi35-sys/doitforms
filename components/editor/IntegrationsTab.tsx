@@ -9,6 +9,26 @@ import {
   extractTikTokId,
 } from "@/lib/tracking-ids";
 
+const FIELD_ICONS: Record<string, string> = {
+  welcome: "👋",
+  short_text: "✏️",
+  long_text: "📝",
+  email: "📧",
+  phone: "📱",
+  multiple_choice: "☑️",
+  thankyou: "🎉",
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  welcome: "Boas-vindas",
+  short_text: "Resposta curta",
+  long_text: "Texto longo",
+  email: "E-mail",
+  phone: "Telefone",
+  multiple_choice: "Múltipla escolha",
+  thankyou: "Agradecimento",
+};
+
 const CRM_INTEGRATIONS = [
   {
     name: "Active Campaign",
@@ -39,9 +59,7 @@ export function IntegrationsTab({
   const trigger: ConversionTrigger = form.conversion_trigger || {
     type: "finish",
   };
-  const questionFields = fields.filter(
-    (f) => f.type !== "welcome" && f.type !== "thankyou",
-  );
+  const allFields = [...fields].sort((a, b) => a.position - b.position);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
@@ -205,7 +223,7 @@ export function IntegrationsTab({
                 onPersist({
                   conversion_trigger: {
                     type: "field",
-                    fieldId: questionFields[0]?.id ?? null,
+                    fieldId: allFields[0]?.id ?? null,
                   },
                 })
               }
@@ -215,21 +233,47 @@ export function IntegrationsTab({
           </label>
 
           {trigger.type === "field" && (
-            <select
-              value={trigger.fieldId ?? ""}
-              onChange={(e) =>
-                onPersist({
-                  conversion_trigger: { type: "field", fieldId: e.target.value },
-                })
-              }
-              className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-brand-400"
-            >
-              {questionFields.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.title}
-                </option>
-              ))}
-            </select>
+            <div className="mt-3 grid gap-2">
+              {allFields.map((f, i) => {
+                const selected = trigger.fieldId === f.id;
+                const icon = FIELD_ICONS[f.type] ?? "📋";
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() =>
+                      onPersist({
+                        conversion_trigger: { type: "field", fieldId: f.id },
+                      })
+                    }
+                    className={`flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition ${
+                      selected
+                        ? "border-brand-500 bg-brand-50"
+                        : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        selected
+                          ? "bg-brand-600 text-white"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-base">{icon}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className={`block truncate text-sm font-medium ${selected ? "text-brand-700" : "text-slate-700"}`}>
+                        {f.title || "(sem título)"}
+                      </span>
+                      <span className="text-xs text-slate-400">{FIELD_LABELS[f.type]}</span>
+                    </span>
+                    {selected && (
+                      <span className="shrink-0 text-brand-600">✓</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
       </section>
