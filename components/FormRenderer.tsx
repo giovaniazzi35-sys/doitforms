@@ -22,6 +22,7 @@ import {
   getBtnAnimClass,
 } from "@/lib/themes";
 import { NotificationPopup } from "@/components/NotificationPopup";
+import { CountdownTimer } from "@/components/CountdownTimer";
 
 type Mode = "live" | "preview";
 
@@ -495,6 +496,11 @@ export function FormRenderer({
       className="relative flex flex-1 flex-col w-full"
       style={{ ...bg, fontFamily: style.font }}
     >
+      {/* countdown timer */}
+      {form.settings?.timer?.enabled && (
+        <CountdownTimer settings={form.settings.timer} />
+      )}
+
       {/* progress bar */}
       {current.type !== "welcome" && (
         <div className="h-1.5 w-full bg-black/5">

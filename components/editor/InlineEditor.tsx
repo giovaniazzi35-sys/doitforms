@@ -11,6 +11,9 @@ import {
 } from "@/lib/types";
 import {
   getGoogleFontUrl,
+  getFontSizes,
+  getTextAnimClass,
+  getBtnAnimClass,
   GOOGLE_FONTS,
   THEME_PRESETS,
   TEXT_ANIMATIONS,
@@ -73,6 +76,21 @@ export function InlineEditor({
     document.head.appendChild(link);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [style.font]);
+
+  // Replay text animation whenever the user picks a new one.
+  const [animKey, setAnimKey] = useState(0);
+  const prevAnimRef = useRef(style.textAnimation);
+  useEffect(() => {
+    if (style.textAnimation !== prevAnimRef.current) {
+      prevAnimRef.current = style.textAnimation;
+      setAnimKey((k) => k + 1);
+    }
+  }, [style.textAnimation]);
+
+  const fontSizes = getFontSizes(style.fontSizeScale);
+  const textAnimClass = getTextAnimClass(style.textAnimation);
+  const btnAnimClass = getBtnAnimClass(style.buttonAnimation);
+
   const cfg = field.config || {};
   const align: Align = cfg.align || "left";
   const radius = `${style.borderRadius ?? 8}px`;
@@ -174,23 +192,26 @@ export function InlineEditor({
               />
             )}
 
-            <AutoTextarea
-              value={field.title}
-              onChange={(v) => onChange({ title: v })}
-              onBlur={(v) => onSave({ title: v })}
-              placeholder="Escreva o título aqui..."
-              className={`w-full resize-none whitespace-pre-line bg-transparent text-2xl font-bold leading-snug outline-none sm:text-3xl ${alignClass}`}
-              style={{ color: style.questionColor, textAlign: align }}
-            />
+            {/* Heading — wrapped in keyed div so animation replays on change */}
+            <div key={animKey} className={`${alignClass} ${textAnimClass}`}>
+              <AutoTextarea
+                value={field.title}
+                onChange={(v) => onChange({ title: v })}
+                onBlur={(v) => onSave({ title: v })}
+                placeholder="Escreva o título aqui..."
+                className={`w-full resize-none whitespace-pre-line bg-transparent font-bold leading-snug outline-none`}
+                style={{ color: style.questionColor, textAlign: align, fontSize: fontSizes.title }}
+              />
 
-            <AutoTextarea
-              value={field.description}
-              onChange={(v) => onChange({ description: v })}
-              onBlur={(v) => onSave({ description: v })}
-              placeholder="Descrição (opcional) — pressione Enter para quebrar linha"
-              className={`mt-4 w-full resize-none whitespace-pre-line bg-transparent text-base leading-relaxed opacity-80 outline-none ${alignClass}`}
-              style={{ textAlign: align, color: style.questionColor }}
-            />
+              <AutoTextarea
+                value={field.description}
+                onChange={(v) => onChange({ description: v })}
+                onBlur={(v) => onSave({ description: v })}
+                placeholder="Descrição (opcional) — pressione Enter para quebrar linha"
+                className={`mt-4 w-full resize-none whitespace-pre-line bg-transparent leading-relaxed opacity-80 outline-none`}
+                style={{ textAlign: align, color: style.questionColor, fontSize: fontSizes.desc }}
+              />
+            </div>
             <p className={`mt-1 text-xs text-slate-400 ${alignClass}`}>
               Enter quebra a linha · **texto** vira <strong>negrito</strong>
             </p>
@@ -277,10 +298,22 @@ export function InlineEditor({
                   value={cfg.buttonText || ""}
                   onChange={(e) => updateConfig({ buttonText: e.target.value })}
                   placeholder="Texto do botão"
-                  className="rounded-lg px-6 py-3 text-center text-base font-semibold text-white shadow-sm outline-none"
-                  style={{ backgroundColor: style.buttonColor, borderRadius: radius }}
+                  className={`rounded-lg px-6 py-3 text-center font-semibold text-white shadow-sm outline-none ${btnAnimClass}`}
+                  style={{ backgroundColor: style.buttonColor, borderRadius: radius, fontSize: fontSizes.btn }}
                   size={Math.max((cfg.buttonText || "Texto do botão").length, 8)}
                 />
+              </div>
+            )}
+
+            {/* Button preview for non-welcome steps */}
+            {field.type !== "welcome" && field.type !== "thankyou" && (
+              <div className={`mt-8 flex ${justify}`}>
+                <div
+                  className={`rounded-lg px-6 py-3 font-semibold text-white shadow-sm pointer-events-none select-none ${btnAnimClass}`}
+                  style={{ backgroundColor: style.buttonColor, borderRadius: radius, fontSize: fontSizes.btn }}
+                >
+                  {field.type === "multiple_choice" ? "Continuar →" : "Continuar →"}
+                </div>
               </div>
             )}
           </div>
@@ -399,6 +432,13 @@ export function InlineEditor({
               onChange={(e) => onStylePatch({ borderRadius: Number(e.target.value) })}
               className="w-full accent-brand-600"
             />
+
+            {/* Timer hint */}
+            <div className="mt-5 rounded-lg border border-dashed border-slate-200 p-3 text-center">
+              <p className="text-xs text-slate-500">
+                ⏱ Cronômetro regressivo disponível em <strong>Opções</strong>
+              </p>
+            </div>
           </div>
         )}
 

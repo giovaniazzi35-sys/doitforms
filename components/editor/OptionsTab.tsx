@@ -8,6 +8,7 @@ import type {
   PixelConfig,
   NotificationSettings,
   PopupSettings,
+  TimerSettings,
 } from "@/lib/types";
 import { DEFAULT_STYLE, DEFAULT_PIXEL_CONFIG } from "@/lib/types";
 import { deleteAllResponses, deleteFormAndRedirect } from "@/app/forms/[id]/actions";
@@ -36,6 +37,7 @@ export function OptionsTab({
   const pixel: PixelConfig = { ...DEFAULT_PIXEL_CONFIG, ...form.pixel_config };
 
   const popup: PopupSettings = settings.popup || {};
+  const timer: TimerSettings = settings.timer || {};
 
   function patchStyle(p: Partial<FormStyle>) {
     onPersist({ style: { ...style, ...p } });
@@ -51,6 +53,9 @@ export function OptionsTab({
   }
   function patchPopup(p: Partial<PopupSettings>) {
     patchSettings({ popup: { ...popup, ...p } });
+  }
+  function patchTimer(p: Partial<TimerSettings>) {
+    patchSettings({ timer: { ...timer, ...p } });
   }
 
   return (
@@ -273,6 +278,116 @@ export function OptionsTab({
                   <span className="w-10 text-right text-sm font-medium text-slate-600">
                     {popup.interval ?? 25}s
                   </span>
+                </div>
+              </Row>
+            </>
+          )}
+        </div>
+      </Section>
+
+      {/* ── Cronômetro ── */}
+      <Section
+        title="Cronômetro regressivo"
+        subtitle="Exibe uma barra de contagem regressiva no topo do formulário para criar urgência."
+      >
+        <div className="space-y-4">
+          <Toggle
+            label="Ativar cronômetro"
+            desc="Aparece no topo do formulário para todos os visitantes."
+            checked={!!timer.enabled}
+            onChange={(v) => patchTimer({ enabled: v })}
+          />
+          {timer.enabled && (
+            <>
+              <Row label="Texto do rótulo">
+                <input
+                  defaultValue={timer.label || ""}
+                  onBlur={(e) => patchTimer({ label: e.target.value })}
+                  placeholder="⏰ Oferta expira em:"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+                />
+              </Row>
+              <Row label="Duração (minutos)">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={1}
+                    max={60}
+                    step={1}
+                    value={Math.round((timer.durationSeconds ?? 600) / 60)}
+                    onChange={(e) => patchTimer({ durationSeconds: Number(e.target.value) * 60 })}
+                    className="w-full accent-brand-600"
+                  />
+                  <span className="w-10 text-right text-sm font-medium text-slate-600">
+                    {Math.round((timer.durationSeconds ?? 600) / 60)}min
+                  </span>
+                </div>
+              </Row>
+              <Row label="Alerta nos últimos (segundos)">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={10}
+                    max={300}
+                    step={10}
+                    value={timer.urgencyThreshold ?? 60}
+                    onChange={(e) => patchTimer({ urgencyThreshold: Number(e.target.value) })}
+                    className="w-full accent-brand-600"
+                  />
+                  <span className="w-14 text-right text-sm font-medium text-slate-600">
+                    {timer.urgencyThreshold ?? 60}s
+                  </span>
+                </div>
+              </Row>
+              <Row label="Reiniciar automaticamente">
+                <Toggle
+                  label="Ao chegar a zero, reinicia a contagem"
+                  checked={!!timer.autoRestart}
+                  onChange={(v) => patchTimer({ autoRestart: v })}
+                />
+              </Row>
+              <Row label="Tamanho do texto">
+                <select
+                  value={timer.fontSize || "md"}
+                  onChange={(e) => patchTimer({ fontSize: e.target.value as "sm" | "md" | "lg" })}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+                >
+                  <option value="sm">Pequeno</option>
+                  <option value="md">Médio</option>
+                  <option value="lg">Grande</option>
+                </select>
+              </Row>
+              <Row label="Cor do texto">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={timer.color || "#ffffff"}
+                    onChange={(e) => patchTimer({ color: e.target.value })}
+                    className="h-9 w-16 cursor-pointer rounded border border-slate-200 p-0.5"
+                  />
+                  <span className="text-sm text-slate-500">{timer.color || "#ffffff"}</span>
+                </div>
+              </Row>
+              <Row label="Cor de fundo">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={timer.backgroundColor || "#0f172a"}
+                    onChange={(e) => patchTimer({ backgroundColor: e.target.value })}
+                    className="h-9 w-16 cursor-pointer rounded border border-slate-200 p-0.5"
+                  />
+                  <span className="text-sm text-slate-500">{timer.backgroundColor || "#0f172a"}</span>
+                </div>
+              </Row>
+              <Row label="Cor de urgência">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={timer.urgencyBackgroundColor || "#dc2626"}
+                    onChange={(e) => patchTimer({ urgencyBackgroundColor: e.target.value })}
+                    className="h-9 w-16 cursor-pointer rounded border border-slate-200 p-0.5"
+                  />
+                  <span className="text-sm text-slate-500">{timer.urgencyBackgroundColor || "#dc2626"}</span>
                 </div>
               </Row>
             </>

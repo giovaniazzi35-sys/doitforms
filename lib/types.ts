@@ -79,6 +79,18 @@ export interface PopupSettings {
   author?: string;
 }
 
+export interface TimerSettings {
+  enabled?: boolean;
+  durationSeconds?: number;      // default 600 (10 min)
+  autoRestart?: boolean;
+  label?: string;                // e.g. "⏰ Oferta expira em:"
+  color?: string;                // text color, default #ffffff
+  backgroundColor?: string;      // bar bg, default #0f172a
+  urgencyThreshold?: number;     // secs left when urgency kicks in, default 60
+  urgencyBackgroundColor?: string; // default #dc2626
+  fontSize?: "sm" | "md" | "lg";
+}
+
 export interface NotificationSettings {
   mode?: "all" | "complete" | "none";
   emailAlert?: boolean;
@@ -106,6 +118,8 @@ export interface FormSettings {
   disqualify?: DisqualifyScreen;
   /** Social proof / urgency popup shown in top-right corner. */
   popup?: PopupSettings;
+  /** Countdown timer shown at the top of the form. */
+  timer?: TimerSettings;
 }
 
 export interface PixelConfig {
