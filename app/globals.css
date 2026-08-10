@@ -57,6 +57,85 @@ body {
   animation: fadeUp 0.45s ease both;
 }
 
+/* ── Text entrance animations ───────────────────────────────── */
+@keyframes textFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-text-fade {
+  animation: textFade 0.6s ease both;
+}
+
+@keyframes textSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-text-slide-up {
+  animation: textSlideUp 0.55s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes textSlideLeft {
+  from { opacity: 0; transform: translateX(32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-text-slide-left {
+  animation: textSlideLeft 0.55s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes textZoom {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-text-zoom {
+  animation: textZoom 0.5s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+/* ── Button continuous animations ───────────────────────────── */
+@keyframes btnPulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 currentColor; }
+  50%       { transform: scale(1.04); box-shadow: 0 0 0 6px transparent; }
+}
+.animate-btn-pulse {
+  animation: btnPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes btnBounce {
+  0%, 100% { transform: translateY(0); }
+  40%       { transform: translateY(-6px); }
+  60%       { transform: translateY(-3px); }
+}
+.animate-btn-bounce {
+  animation: btnBounce 1.4s cubic-bezier(.28,.84,.42,1) infinite;
+}
+
+@keyframes btnGlow {
+  0%, 100% { box-shadow: 0 0 6px 2px rgba(255,255,255,0.15); }
+  50%       { box-shadow: 0 0 18px 6px rgba(255,255,255,0.45); }
+}
+.animate-btn-glow {
+  animation: btnGlow 2s ease-in-out infinite;
+}
+
+@keyframes btnShake {
+  0%, 90%, 100%  { transform: rotate(0deg); }
+  92%            { transform: rotate(-4deg); }
+  94%            { transform: rotate(4deg); }
+  96%            { transform: rotate(-3deg); }
+  98%            { transform: rotate(3deg); }
+}
+.animate-btn-shake {
+  animation: btnShake 3s ease-in-out infinite;
+}
+
+/* ── Notification popup slide-in ────────────────────────────── */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(120%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-right {
+  animation: slideInRight 0.4s cubic-bezier(.22,1,.36,1) both;
+}
+
 .thin-scroll::-webkit-scrollbar {
   width: 8px;
   height: 8px;

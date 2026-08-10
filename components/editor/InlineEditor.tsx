@@ -8,6 +8,7 @@ import {
   type FormField,
   type FieldOption,
 } from "@/lib/types";
+import { getGoogleFontUrl } from "@/lib/themes";
 import { FieldEditor } from "./FieldEditor";
 
 type Align = "left" | "center" | "right";
@@ -40,6 +41,20 @@ export function InlineEditor({
 }) {
   const [showSettings, setShowSettings] = useState(false);
   const style = { ...DEFAULT_STYLE, ...form.style };
+
+  // Load Google Font in the editor canvas so the preview matches the published form.
+  useEffect(() => {
+    const fontUrl = getGoogleFontUrl(style.font || "Inter");
+    if (!fontUrl) return;
+    const id = `gf-${(style.font || "").replace(/\s+/g, "-").toLowerCase()}`;
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = fontUrl;
+    document.head.appendChild(link);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [style.font]);
   const cfg = field.config || {};
   const align: Align = cfg.align || "left";
   const radius = `${style.borderRadius ?? 8}px`;

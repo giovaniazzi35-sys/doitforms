@@ -15,6 +15,13 @@ import {
   type DoitForm,
   type FormField,
 } from "@/lib/types";
+import {
+  getGoogleFontUrl,
+  getFontSizes,
+  getTextAnimClass,
+  getBtnAnimClass,
+} from "@/lib/themes";
+import { NotificationPopup } from "@/components/NotificationPopup";
 
 type Mode = "live" | "preview";
 
@@ -179,6 +186,19 @@ export function FormRenderer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
+
+  // Dynamically load Google Font when form style specifies one.
+  useEffect(() => {
+    const fontUrl = getGoogleFontUrl(style.font || "Inter");
+    if (!fontUrl) return;
+    const id = `gf-${(style.font || "").replace(/\s+/g, "-").toLowerCase()}`;
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = fontUrl;
+    document.head.appendChild(link);
+  }, [style.font]);
 
   const current = mode === "preview" && forcedIndex != null
     ? ordered[Math.min(forcedIndex, ordered.length - 1)]
@@ -425,6 +445,8 @@ export function FormRenderer({
     : { backgroundColor: style.backgroundColor };
 
   const radius = `${style.borderRadius ?? 8}px`;
+  const fontSizes = getFontSizes(style.fontSizeScale);
+  const btnAnimClass = getBtnAnimClass(style.buttonAnimation);
 
   // Disqualification end screen (qualification logic).
   if (disqualified) {
@@ -498,6 +520,7 @@ export function FormRenderer({
             field={current}
             style={style}
             radius={radius}
+            fontSizes={fontSizes}
             value={answers[current.id] || ""}
             setValue={(v) => setAnswer(current.id, v)}
             onEnter={goNext}
@@ -525,8 +548,8 @@ export function FormRenderer({
                 <button
                   onClick={goNext}
                   disabled={submitting}
-                  className="w-full rounded-lg px-6 py-3 text-center text-base font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-60 sm:w-auto"
-                  style={{ backgroundColor: style.buttonColor, borderRadius: radius }}
+                  className={`w-full rounded-lg px-6 py-3 text-center font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-60 sm:w-auto ${btnAnimClass}`}
+                  style={{ backgroundColor: style.buttonColor, borderRadius: radius, fontSize: fontSizes.btn }}
                 >
                   {submitting
                     ? "Enviando..."
@@ -584,6 +607,10 @@ export function FormRenderer({
             Feito com doitforms
           </span>
         </div>
+      )}
+
+      {mode === "live" && form.settings?.popup?.enabled && (
+        <NotificationPopup settings={form.settings.popup} />
       )}
     </div>
   );
@@ -793,6 +820,7 @@ function StepBody({
   field,
   style,
   radius,
+  fontSizes,
   value,
   setValue,
   onEnter,
@@ -800,6 +828,7 @@ function StepBody({
   field: FormField;
   style: DoitForm["style"];
   radius: string;
+  fontSizes: ReturnType<typeof getFontSizes>;
   value: string;
   setValue: (v: string) => void;
   onEnter: () => void;
@@ -809,19 +838,20 @@ function StepBody({
   const align = field.config?.align || "left";
   const alignClass =
     align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
+  const textAnimClass = getTextAnimClass(style.textAnimation);
 
   const heading = (
-    <div className={alignClass}>
+    <div className={`${alignClass} ${textAnimClass}`}>
       <h2
-        className="whitespace-pre-line text-2xl font-bold leading-snug sm:text-3xl"
-        style={{ color: qColor }}
+        className="whitespace-pre-line font-bold leading-snug"
+        style={{ color: qColor, fontSize: fontSizes.title }}
       >
         {renderRich(field.title)}
       </h2>
       {field.description && (
         <p
-          className="mt-4 whitespace-pre-line text-base leading-relaxed opacity-80"
-          style={{ color: qColor }}
+          className="mt-4 whitespace-pre-line leading-relaxed opacity-80"
+          style={{ color: qColor, fontSize: fontSizes.desc }}
         >
           {renderRich(field.description)}
         </p>

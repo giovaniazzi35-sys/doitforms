@@ -66,6 +66,17 @@ export interface FormStyle {
   font?: string;
   borderRadius?: number;
   language?: string;
+  fontSizeScale?: "sm" | "md" | "lg" | "xl";
+  textAnimation?: string;
+  buttonAnimation?: string;
+}
+
+export interface PopupSettings {
+  enabled?: boolean;
+  message?: string;
+  interval?: number;
+  emoji?: string;
+  author?: string;
 }
 
 export interface NotificationSettings {
@@ -93,6 +104,8 @@ export interface FormSettings {
   shareDescription?: string;
   /** Screen shown when a lead is disqualified by qualification logic. */
   disqualify?: DisqualifyScreen;
+  /** Social proof / urgency popup shown in top-right corner. */
+  popup?: PopupSettings;
 }
 
 export interface PixelConfig {

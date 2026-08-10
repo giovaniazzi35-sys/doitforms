@@ -7,11 +7,17 @@ import type {
   FormSettings,
   PixelConfig,
   NotificationSettings,
+  PopupSettings,
 } from "@/lib/types";
 import { DEFAULT_STYLE, DEFAULT_PIXEL_CONFIG } from "@/lib/types";
 import { deleteAllResponses, deleteFormAndRedirect } from "@/app/forms/[id]/actions";
-
-const FONTS = ["Inter", "Lato", "Roboto", "Poppins", "Montserrat", "Open Sans"];
+import {
+  GOOGLE_FONTS,
+  THEME_PRESETS,
+  TEXT_ANIMATIONS,
+  BUTTON_ANIMATIONS,
+  FONT_SIZE_SCALES,
+} from "@/lib/themes";
 
 export function OptionsTab({
   form,
@@ -29,6 +35,8 @@ export function OptionsTab({
   const notif: NotificationSettings = settings.notifications || {};
   const pixel: PixelConfig = { ...DEFAULT_PIXEL_CONFIG, ...form.pixel_config };
 
+  const popup: PopupSettings = settings.popup || {};
+
   function patchStyle(p: Partial<FormStyle>) {
     onPersist({ style: { ...style, ...p } });
   }
@@ -40,6 +48,9 @@ export function OptionsTab({
   }
   function patchPixel(p: Partial<PixelConfig>) {
     onPersist({ pixel_config: { ...pixel, ...p } });
+  }
+  function patchPopup(p: Partial<PopupSettings>) {
+    patchSettings({ popup: { ...popup, ...p } });
   }
 
   return (
@@ -57,8 +68,46 @@ export function OptionsTab({
         />
       </Section>
 
-      {/* Estilo */}
-      <Section title="Personalizar estilo" subtitle="Cores, fontes e logotipo.">
+      {/* ── Temas prontos ── */}
+      <Section
+        title="Temas prontos"
+        subtitle="Selecione um tema para aplicar cores, fonte e animações de uma vez."
+      >
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {THEME_PRESETS.map((t) => {
+            const active = (style.backgroundColor === t.style.backgroundColor &&
+              style.buttonColor === t.style.buttonColor);
+            return (
+              <button
+                key={t.id}
+                onClick={() => patchStyle(t.style as FormStyle)}
+                className={`flex flex-col items-start gap-1 rounded-xl border-2 px-3 py-2.5 text-left transition hover:shadow-md ${
+                  active
+                    ? "border-brand-500 bg-brand-50"
+                    : "border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                {/* mini color preview */}
+                <div
+                  className="h-5 w-full rounded"
+                  style={{ backgroundColor: t.style.backgroundColor }}
+                >
+                  <div
+                    className="h-full w-8 rounded"
+                    style={{ backgroundColor: t.style.buttonColor }}
+                  />
+                </div>
+                <span className="text-base leading-none">{t.emoji}</span>
+                <span className="text-xs font-semibold text-slate-700">{t.name}</span>
+                <span className="text-[10px] text-slate-400">{t.description}</span>
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
+      {/* ── Estilo personalizado ── */}
+      <Section title="Personalizar estilo" subtitle="Cores, fonte, logotipo e fundo.">
         <div className="space-y-4">
           <ColorRow label="Cor do botão" value={style.buttonColor!} onChange={(v) => patchStyle({ buttonColor: v })} />
           <ColorRow label="Cor da pergunta" value={style.questionColor!} onChange={(v) => patchStyle({ questionColor: v })} />
@@ -81,17 +130,7 @@ export function OptionsTab({
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
             />
           </Row>
-          <Row label="Fonte">
-            <select
-              value={style.font}
-              onChange={(e) => patchStyle({ font: e.target.value })}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
-            >
-              {FONTS.map((f) => (
-                <option key={f}>{f}</option>
-              ))}
-            </select>
-          </Row>
+
           <Row label={`Bordas (${style.borderRadius}px)`}>
             <input
               type="range"
@@ -108,6 +147,136 @@ export function OptionsTab({
             checked={!!settings.removeBranding}
             onChange={(v) => patchSettings({ removeBranding: v })}
           />
+        </div>
+      </Section>
+
+      {/* ── Tipografia ── */}
+      <Section title="Tipografia" subtitle="Fonte, tamanho e escala responsiva dos textos.">
+        <div className="space-y-4">
+          <Row label="Fonte">
+            <select
+              value={style.font || "Inter"}
+              onChange={(e) => patchStyle({ font: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+            >
+              {GOOGLE_FONTS.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </Row>
+
+          <div>
+            <p className="mb-2 text-sm font-medium text-slate-700">Tamanho dos textos</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {FONT_SIZE_SCALES.map((s) => {
+                const active = (style.fontSizeScale || "md") === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => patchStyle({ fontSizeScale: s.id as FormStyle["fontSizeScale"] })}
+                    className={`rounded-lg border-2 px-2 py-2 text-center text-xs transition ${
+                      active
+                        ? "border-brand-500 bg-brand-50 text-brand-700 font-semibold"
+                        : "border-slate-200 text-slate-500 hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="font-semibold">{s.label}</div>
+                    <div className="opacity-60">{s.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              Os tamanhos são fluidos e se adaptam automaticamente a celulares, computadores e TVs.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── Animações ── */}
+      <Section title="Animações" subtitle="Efeitos de entrada do texto e do botão CTA.">
+        <div className="space-y-4">
+          <Row label="Animação do texto">
+            <select
+              value={style.textAnimation || "none"}
+              onChange={(e) => patchStyle({ textAnimation: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+            >
+              {TEXT_ANIMATIONS.map((a) => (
+                <option key={a.id} value={a.id}>{a.label}</option>
+              ))}
+            </select>
+          </Row>
+          <Row label="Animação do botão">
+            <select
+              value={style.buttonAnimation || "none"}
+              onChange={(e) => patchStyle({ buttonAnimation: e.target.value })}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+            >
+              {BUTTON_ANIMATIONS.map((a) => (
+                <option key={a.id} value={a.id}>{a.label}</option>
+              ))}
+            </select>
+          </Row>
+        </div>
+      </Section>
+
+      {/* ── Popup de notificação ── */}
+      <Section
+        title="Popup de notificação"
+        subtitle="Exibe um aviso no canto superior direito para criar senso de urgência e prova social."
+      >
+        <div className="space-y-4">
+          <Toggle
+            label="Ativar popup"
+            desc={`Aparece a cada ${popup.interval ?? 25} segundos.`}
+            checked={!!popup.enabled}
+            onChange={(v) => patchPopup({ enabled: v })}
+          />
+          {popup.enabled && (
+            <>
+              <Row label="Mensagem">
+                <input
+                  defaultValue={popup.message || ""}
+                  onBlur={(e) => patchPopup({ message: e.target.value })}
+                  placeholder="Alguém acabou de se inscrever! 🎉"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+                />
+              </Row>
+              <Row label="Emoji / ícone">
+                <input
+                  defaultValue={popup.emoji || ""}
+                  onBlur={(e) => patchPopup({ emoji: e.target.value })}
+                  placeholder="🔔"
+                  className="w-24 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+                />
+              </Row>
+              <Row label="Nome / autor (opcional)">
+                <input
+                  defaultValue={popup.author || ""}
+                  onBlur={(e) => patchPopup({ author: e.target.value })}
+                  placeholder="João de São Paulo"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400"
+                />
+              </Row>
+              <Row label={`Intervalo (segundos)`}>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={5}
+                    max={120}
+                    step={5}
+                    value={popup.interval ?? 25}
+                    onChange={(e) => patchPopup({ interval: Number(e.target.value) })}
+                    className="w-full accent-brand-600"
+                  />
+                  <span className="w-10 text-right text-sm font-medium text-slate-600">
+                    {popup.interval ?? 25}s
+                  </span>
+                </div>
+              </Row>
+            </>
+          )}
         </div>
       </Section>
 
