@@ -13,6 +13,7 @@ import {
   publishForm,
   updateForm,
 } from "./actions";
+import { duplicateForm } from "@/app/dashboard/actions";
 import { StepList } from "@/components/editor/StepList";
 import { InlineEditor } from "@/components/editor/InlineEditor";
 import { OptionsTab } from "@/components/editor/OptionsTab";
@@ -60,6 +61,7 @@ export function FormEditor({
     initialFields[0]?.id ?? "",
   );
   const [publishing, setPublishing] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const [dirty, setDirty] = useState(initialForm.has_draft);
 
   const selected = fields.find((f) => f.id === selectedId) || fields[0];
@@ -150,6 +152,16 @@ export function FormEditor({
     }
   }
 
+  async function handleDuplicate() {
+    setDuplicating(true);
+    try {
+      // Redirects to the copy's editor on success.
+      await duplicateForm(form.id);
+    } catch {
+      setDuplicating(false);
+    }
+  }
+
   function switchTab(t: Tab) {
     setTab(t);
     const url = new URL(window.location.href);
@@ -200,6 +212,14 @@ export function FormEditor({
               👁 Ver
             </a>
           )}
+          <button
+            onClick={handleDuplicate}
+            disabled={duplicating}
+            title="Criar uma cópia deste formulário para fazer variações"
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            {duplicating ? "Duplicando..." : "⧉ Duplicar"}
+          </button>
           <button
             onClick={handlePublish}
             disabled={publishing}

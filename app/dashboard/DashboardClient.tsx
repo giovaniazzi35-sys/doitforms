@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createForm, deleteForm } from "./actions";
+import { createForm, deleteForm, duplicateForm } from "./actions";
 
 interface FormItem {
   id: string;
@@ -17,6 +17,7 @@ export function DashboardClient({ forms }: { forms: FormItem[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   const filtered = forms.filter((f) =>
     f.title.toLowerCase().includes(query.toLowerCase()),
@@ -30,6 +31,16 @@ export function DashboardClient({ forms }: { forms: FormItem[] }) {
       await createForm(fd);
     } catch {
       setCreating(false);
+    }
+  }
+
+  async function handleDuplicate(id: string) {
+    setDuplicatingId(id);
+    try {
+      // Redirects to the copy's editor on success.
+      await duplicateForm(id);
+    } catch {
+      setDuplicatingId(null);
     }
   }
 
@@ -120,6 +131,14 @@ export function DashboardClient({ forms }: { forms: FormItem[] }) {
                 >
                   Respostas
                 </Link>
+                <button
+                  onClick={() => handleDuplicate(f.id)}
+                  disabled={duplicatingId === f.id}
+                  title="Criar uma cópia deste formulário"
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  {duplicatingId === f.id ? "Duplicando..." : "⧉ Duplicar"}
+                </button>
                 <button
                   onClick={() => handleDelete(f.id, f.title)}
                   className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-rose-500 hover:bg-rose-50"
